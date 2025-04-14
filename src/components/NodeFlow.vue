@@ -297,6 +297,28 @@ export default defineComponent({
         return false;
       }
       
+      // 检查连接方向是否正确（只能从输出连接到输入）
+      const isSourceOutput = connection.sourceHandle.includes('__') 
+        ? connection.sourceHandle.startsWith(`${connection.source}__output_`)
+        : true; // 默认端口默认为输出
+      
+      const isTargetInput = connection.targetHandle.includes('__')
+        ? connection.targetHandle.startsWith(`${connection.target}__input_`)
+        : true; // 默认端口默认为输入
+      
+      if (!isSourceOutput || !isTargetInput) {
+        validationMessage.value = '❌ 连接失败：只能从输出端口连接到输入端口';
+        isValidInfo.value = false;
+        showValidationInfo.value = true;
+        
+        // 3秒后隐藏错误消息
+        setTimeout(() => {
+          showValidationInfo.value = false;
+        }, 3000);
+        
+        return false;
+      }
+      
       // 提取端口ID
       const sourceHandleId = connection.sourceHandle.split('__')[1];
       const targetHandleId = connection.targetHandle.split('__')[1];
@@ -357,11 +379,16 @@ export default defineComponent({
         return;
       }
       
+      // 获取源节点
+      const sourceNode = getNodes.value.find(node => node.id === connection.source);
+      
       // 创建一个新的边
       const newEdge = EdgeFactory.createDataFlowEdge(
         connection.source, 
         connection.target, 
-        `edge-${Date.now()}`
+        `edge-${Date.now()}`,
+        sourceNode,
+        connection.sourceHandle || undefined
       );
       
       // 保留连接的sourceHandle和targetHandle (多端口节点)
@@ -398,13 +425,28 @@ export default defineComponent({
       console.log('更新边:', oldEdge, '->', newConnection);
       edgeUpdateSuccessful.value = true;
       
+      // 获取源节点
+      const sourceNode = getNodes.value.find(node => node.id === newConnection.source);
+      
       // 创建一个新的边
       const newEdge = {
         ...oldEdge,
         source: newConnection.source,
         target: newConnection.target,
         sourceHandle: newConnection.sourceHandle,
-        targetHandle: newConnection.targetHandle
+        targetHandle: newConnection.targetHandle,
+        style: {
+          ...(oldEdge.style || {}),
+          stroke: sourceNode && newConnection.sourceHandle 
+            ? EdgeFactory.createDataFlowEdge(
+                newConnection.source,
+                newConnection.target,
+                undefined,
+                sourceNode,
+                newConnection.sourceHandle || undefined
+              ).style?.stroke
+            : (oldEdge.style as any)?.stroke
+        }
       };
       
       // 使用类型断言解决类型问题
