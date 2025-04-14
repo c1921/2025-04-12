@@ -26,33 +26,78 @@
         </div>
         <div class="node-time">处理时间: {{ data?.duration ? (data.duration / 1000) + '秒' : '未知' }}</div>
       </div>
+      
+      <!-- 端口标签区域 -->
+      <div v-if="hasCustomPorts" class="port-labels">
+        <!-- 输入端口标签 -->
+        <div v-if="data.ports?.inputs?.length" class="input-port-labels">
+          <div v-for="input in data.ports.inputs" :key="`label-${input.id}`" class="port-label input-label">
+            {{ input.label || `输入 ${input.id}` }}
+          </div>
+        </div>
+        
+        <!-- 输出端口标签 -->
+        <div v-if="data.ports?.outputs?.length" class="output-port-labels">
+          <div v-for="output in data.ports.outputs" :key="`label-${output.id}`" class="port-label output-label">
+            {{ output.label || `输出 ${output.id}` }}
+          </div>
+        </div>
+      </div>
     </div>
     
-    <!-- 连接点 -->
-    <Handle 
-      v-if="!isHorizontalLayout"
-      type="target"
-      :position="Position.Top"
-      class="handle target-top"
-    />
-    <Handle 
-      v-if="!isHorizontalLayout"
-      type="source"
-      :position="Position.Bottom"
-      class="handle source-bottom"
-    />
-    <Handle 
-      v-if="isHorizontalLayout"
-      type="target"
-      :position="Position.Left"
-      class="handle target-left"
-    />
-    <Handle 
-      v-if="isHorizontalLayout"
-      type="source"
-      :position="Position.Right"
-      class="handle source-right"
-    />
+    <!-- 默认连接点 (当没有自定义端口时使用) -->
+    <template v-if="!hasCustomPorts">
+      <Handle 
+        v-if="!isHorizontalLayout"
+        type="target"
+        :position="Position.Top"
+        class="handle target-top"
+      />
+      <Handle 
+        v-if="!isHorizontalLayout"
+        type="source"
+        :position="Position.Bottom"
+        class="handle source-bottom"
+      />
+      <Handle 
+        v-if="isHorizontalLayout"
+        type="target"
+        :position="Position.Left"
+        class="handle target-left"
+      />
+      <Handle 
+        v-if="isHorizontalLayout"
+        type="source"
+        :position="Position.Right"
+        class="handle source-right"
+      />
+    </template>
+    
+    <!-- 自定义输入端口 -->
+    <template v-if="data.ports?.inputs">
+      <Handle 
+        v-for="(input, index) in data.ports.inputs"
+        :key="`input-${input.id}`"
+        :id="`${id}__${input.id}`"
+        type="target"
+        :position="getInputPortPosition(input, index)"
+        :style="getPortStyle(input, index, data.ports.inputs.length, 'input')"
+        class="handle custom-input"
+      />
+    </template>
+    
+    <!-- 自定义输出端口 -->
+    <template v-if="data.ports?.outputs">
+      <Handle 
+        v-for="(output, index) in data.ports.outputs"
+        :key="`output-${output.id}`"
+        :id="`${id}__${output.id}`"
+        type="source"
+        :position="getOutputPortPosition(output, index)"
+        :style="getPortStyle(output, index, data.ports.outputs.length, 'output')"
+        class="handle custom-output"
+      />
+    </template>
   </div>
 </template>
 
@@ -123,6 +168,43 @@ const nodeTypeHeaderClass = computed(() => {
     default: return 'custom-header';
   }
 });
+
+// 检查是否有自定义端口
+const hasCustomPorts = computed(() => {
+  return !!(props.data?.ports?.inputs?.length || props.data?.ports?.outputs?.length);
+});
+
+// 获取输入端口位置
+const getInputPortPosition = (input: any, index: number): Position => {
+  if (input.position) return input.position;
+  return isHorizontalLayout.value ? Position.Left : Position.Top;
+};
+
+// 获取输出端口位置
+const getOutputPortPosition = (output: any, index: number): Position => {
+  if (output.position) return output.position;
+  return isHorizontalLayout.value ? Position.Right : Position.Bottom;
+};
+
+// 计算端口位置样式
+const getPortStyle = (port: any, index: number, total: number, type: 'input' | 'output') => {
+  if (port.style) return port.style;
+  
+  // 计算端口位置百分比
+  const position = isHorizontalLayout.value
+    ? { top: `${(index + 1) * 100 / (total + 1)}%` }
+    : { left: `${(index + 1) * 100 / (total + 1)}%` };
+    
+  // 端口颜色
+  const backgroundColor = type === 'input' 
+    ? 'var(--secondary-color, #2ecc71)' 
+    : 'var(--primary-color, #3498db)';
+    
+  return {
+    ...position,
+    backgroundColor
+  };
+};
 
 // 获取节点图标
 const nodeIcon = computed(() => {
@@ -337,6 +419,36 @@ const nodeIcon = computed(() => {
   color: #666;
 }
 
+/* 端口标签样式 */
+.port-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.input-port-labels, .output-port-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.port-label {
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+.input-label {
+  background-color: rgba(46, 204, 113, 0.2);
+  color: #2c3e50;
+}
+
+.output-label {
+  background-color: rgba(52, 152, 219, 0.2);
+  color: #2c3e50;
+}
+
 .spinner {
   width: 12px;
   height: 12px;
@@ -358,11 +470,11 @@ const nodeIcon = computed(() => {
   height: 10px !important;
 }
 
-.handle.target-top {
+.handle.target-top, .handle.custom-input {
   background-color: var(--secondary-color, #2ecc71) !important;
 }
 
-.handle.source-bottom {
+.handle.source-bottom, .handle.custom-output {
   background-color: var(--primary-color, #3498db) !important;
 }
 

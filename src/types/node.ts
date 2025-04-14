@@ -10,6 +10,18 @@ export interface NodeData {
   label?: string;
   duration?: number; // 改为可选，如果不存在会使用默认值
   status?: NodeStatus; // 初始可以为undefined
+  ports?: {
+    inputs?: Array<{
+      id: string;
+      label?: string;
+      position?: Position;
+    }>;
+    outputs?: Array<{
+      id: string;
+      label?: string;
+      position?: Position;
+    }>;
+  };
   [key: string]: any; // 允许扩展其他属性
 }
 

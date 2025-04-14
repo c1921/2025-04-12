@@ -72,19 +72,36 @@ export default defineComponent({
     const process1Id = 'process-1';
     const transform1Id = 'transform-1';
     const output1Id = 'output-1';
+    const multiPortId = 'multi-port-1';
 
     const initialNodes = [
       NodeFactory.createNode(NodeType.INPUT, '输入节点 1', { x: 0, y: 0 }, undefined, input1Id),
       NodeFactory.createNode(NodeType.PROCESS, '处理节点 1', { x: 250, y: 0 }, undefined, process1Id),
       NodeFactory.createNode(NodeType.TRANSFORM, '转换节点 1', { x: 500, y: 0 }, undefined, transform1Id),
-      NodeFactory.createNode(NodeType.OUTPUT, '输出节点 1', { x: 750, y: 0 }, undefined, output1Id)
+      NodeFactory.createNode(NodeType.OUTPUT, '输出节点 1', { x: 750, y: 0 }, undefined, output1Id),
+      
+      // 多端口节点示例
+      NodeFactory.createMultiPortNode(
+        NodeType.PROCESS, 
+        '多端口节点', 
+        { x: 250, y: 200 }, 
+        3,  // 3个输入端口
+        2,  // 2个输出端口
+        { duration: 4000 },  // 其他数据
+        multiPortId
+      )
     ];
 
     // 创建初始连接线
     const initialEdges = [
       EdgeFactory.createDataFlowEdge(input1Id, process1Id, 'edge-1'),
       EdgeFactory.createDataFlowEdge(process1Id, transform1Id, 'edge-2'),
-      EdgeFactory.createDataFlowEdge(transform1Id, output1Id, 'edge-3')
+      EdgeFactory.createDataFlowEdge(transform1Id, output1Id, 'edge-3'),
+      
+      // 多端口节点的连接线
+      EdgeFactory.createDataFlowEdge(input1Id, `${multiPortId}__input_1`, 'edge-4'),
+      EdgeFactory.createDataFlowEdge(process1Id, `${multiPortId}__input_2`, 'edge-5'),
+      EdgeFactory.createDataFlowEdge(`${multiPortId}__output_1`, output1Id, 'edge-6')
     ];
 
     // 使用vueFlow组合API

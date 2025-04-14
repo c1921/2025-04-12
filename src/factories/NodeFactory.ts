@@ -39,6 +39,51 @@ export class NodeFactory {
     };
   }
 
+  // 创建带有多个输入输出端口的节点
+  static createMultiPortNode(
+    type: NodeType,
+    label: string,
+    position: { x: number; y: number },
+    inputs: number | Array<{ id: string; label?: string; position?: Position }> = 1,
+    outputs: number | Array<{ id: string; label?: string; position?: Position }> = 1,
+    data?: Partial<NodeData>,
+    id?: string
+  ): Node {
+    // 处理输入端口
+    let inputPorts;
+    if (typeof inputs === 'number') {
+      inputPorts = Array.from({ length: inputs }, (_, i) => ({
+        id: `input_${i+1}`,
+        label: `输入 ${i+1}`
+      }));
+    } else {
+      inputPorts = inputs;
+    }
+
+    // 处理输出端口
+    let outputPorts;
+    if (typeof outputs === 'number') {
+      outputPorts = Array.from({ length: outputs }, (_, i) => ({
+        id: `output_${i+1}`,
+        label: `输出 ${i+1}`
+      }));
+    } else {
+      outputPorts = outputs;
+    }
+
+    // 组合数据
+    const nodeData: Partial<NodeData> = {
+      ...data,
+      ports: {
+        inputs: inputPorts,
+        outputs: outputPorts
+      }
+    };
+
+    // 使用基本方法创建节点
+    return this.createNode(type, label, position, nodeData, id);
+  }
+
   // 根据节点类型获取默认处理时间
   private static getDefaultDuration(type: NodeType): number {
     switch (type) {
