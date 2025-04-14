@@ -175,13 +175,13 @@ const hasCustomPorts = computed(() => {
 });
 
 // 获取输入端口位置
-const getInputPortPosition = (input: any, index: number): Position => {
+const getInputPortPosition = (input: any, _index: number): Position => {
   if (input.position) return input.position;
   return isHorizontalLayout.value ? Position.Left : Position.Top;
 };
 
 // 获取输出端口位置
-const getOutputPortPosition = (output: any, index: number): Position => {
+const getOutputPortPosition = (output: any, _index: number): Position => {
   if (output.position) return output.position;
   return isHorizontalLayout.value ? Position.Right : Position.Bottom;
 };

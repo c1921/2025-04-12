@@ -14,6 +14,15 @@
       :min-zoom="0.2" 
       :max-zoom="4"
       class="vue-flow-wrapper"
+      :connect-on-click="true"
+      :snap-to-grid="true"
+      :snap-grid="[20, 20]"
+      :editable="true"
+      :deletable="true"
+      @connect="onConnect"
+      @edge-update="onEdgeUpdate"
+      @edge-update-start="onEdgeUpdateStart"
+      @edge-update-end="onEdgeUpdateEnd"
     >
       <template #node-custom="nodeProps">
         <UnifiedNode v-bind="nodeProps" />
@@ -43,7 +52,17 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue';
-import { VueFlow, useVueFlow } from '@vue-flow/core';
+import { 
+  VueFlow, 
+  useVueFlow,
+  updateEdge 
+} from '@vue-flow/core';
+import type { 
+  Connection, 
+  Edge, 
+  EdgeMouseEvent, 
+  EdgeUpdateEvent
+} from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { MiniMap } from '@vue-flow/minimap';
 import { Controls } from '@vue-flow/controls';
@@ -106,12 +125,77 @@ export default defineComponent({
 
     // 使用vueFlow组合API
     const vueFlowInstance = useVueFlow();
+    const { getEdges, getNodes, setEdges, addEdges } = vueFlowInstance;
     
     // 使用改进的布局API
     const { layout } = useLayout();
 
     // 工作流执行状态
     const isRunning = ref(false);
+
+    // 用于边更新暂存
+    const edgeUpdateSuccessful = ref(true);
+    const edgeUpdateElement = ref<Edge | null>(null);
+
+    // 连接节点事件处理
+    const onConnect = (connection: Connection) => {
+      // 创建一个新的边
+      const newEdge = EdgeFactory.createDataFlowEdge(
+        connection.source, 
+        connection.target, 
+        `edge-${Date.now()}`
+      );
+      
+      // 保留连接的sourceHandle和targetHandle (多端口节点)
+      if (connection.sourceHandle) {
+        newEdge.sourceHandle = connection.sourceHandle;
+      }
+      if (connection.targetHandle) {
+        newEdge.targetHandle = connection.targetHandle;
+      }
+      
+      // 添加新边
+      addEdges([newEdge]);
+      console.log('新连接已创建:', newEdge);
+    };
+
+    // 更新边开始
+    const onEdgeUpdateStart = (event: EdgeMouseEvent) => {
+      console.log('开始更新边:', event.edge);
+      edgeUpdateElement.value = event.edge;
+      edgeUpdateSuccessful.value = true;
+    };
+
+    // 更新边
+    const onEdgeUpdate = (updateEvent: EdgeUpdateEvent) => {
+      const { edge: oldEdge, connection: newConnection } = updateEvent;
+      console.log('更新边:', oldEdge, '->', newConnection);
+      edgeUpdateSuccessful.value = true;
+      
+      // 创建一个新的边
+      const newEdge = {
+        ...oldEdge,
+        source: newConnection.source,
+        target: newConnection.target,
+        sourceHandle: newConnection.sourceHandle,
+        targetHandle: newConnection.targetHandle
+      };
+      
+      // 使用类型断言解决类型问题
+      setEdges((es) => updateEdge(oldEdge, newEdge, es) as any);
+    };
+
+    // 更新边结束
+    const onEdgeUpdateEnd = (_: EdgeMouseEvent) => {
+      console.log('完成边更新, 成功状态:', edgeUpdateSuccessful.value);
+      
+      if (!edgeUpdateSuccessful.value && edgeUpdateElement.value) {
+        // 如果更新不成功，则删除这条边
+        setEdges((es) => es.filter(e => e.id !== (edgeUpdateElement.value as Edge).id));
+      }
+      
+      edgeUpdateElement.value = null;
+    };
 
     // 运行工作流
     const runWorkflow = async () => {
@@ -120,8 +204,8 @@ export default defineComponent({
       
       try {
         console.log('开始执行工作流');
-        console.log('当前节点:', vueFlowInstance.getNodes.value);
-        console.log('当前边:', vueFlowInstance.getEdges.value);
+        console.log('当前节点:', getNodes.value);
+        console.log('当前边:', getEdges.value);
         
         // 通过服务类执行工作流
         const workflowService = new WorkflowService(vueFlowInstance);
@@ -168,6 +252,10 @@ export default defineComponent({
       isRunning,
       LayoutDirection,
       handleLayoutClick,
+      onConnect,
+      onEdgeUpdate,
+      onEdgeUpdateStart,
+      onEdgeUpdateEnd
     };
   }
 });
