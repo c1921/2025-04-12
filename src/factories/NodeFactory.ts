@@ -1,5 +1,5 @@
-import type { Node, NodeData } from '../types/node';
-import { NodeType } from '../types/node';
+import type { Node, NodeData, Port } from '../types/node';
+import { NodeType, PortType } from '../types/node';
 import { Position } from '@vue-flow/core';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -44,8 +44,8 @@ export class NodeFactory {
     type: NodeType,
     label: string,
     position: { x: number; y: number },
-    inputs: number | Array<{ id: string; label?: string; position?: Position }> = 1,
-    outputs: number | Array<{ id: string; label?: string; position?: Position }> = 1,
+    inputs: number | Array<Port> = 1,
+    outputs: number | Array<Port> = 1,
     data?: Partial<NodeData>,
     id?: string
   ): Node {
@@ -82,6 +82,42 @@ export class NodeFactory {
 
     // 使用基本方法创建节点
     return this.createNode(type, label, position, nodeData, id);
+  }
+
+  // 创建带有类型端口的节点
+  static createTypedPortNode(
+    type: NodeType,
+    label: string,
+    position: { x: number; y: number },
+    inputPortTypes: PortType[] = [],
+    outputPortTypes: PortType[] = [],
+    data?: Partial<NodeData>,
+    id?: string
+  ): Node {
+    // 创建带类型的输入端口
+    const inputPorts: Port[] = inputPortTypes.map((portType, index) => ({
+      id: `input_${portType}_${index+1}`,
+      label: `${portType}型输入`,
+      type: portType
+    }));
+
+    // 创建带类型的输出端口
+    const outputPorts: Port[] = outputPortTypes.map((portType, index) => ({
+      id: `output_${portType}_${index+1}`,
+      label: `${portType}型输出`,
+      type: portType
+    }));
+
+    // 使用已有的方法创建多端口节点
+    return this.createMultiPortNode(
+      type,
+      label,
+      position,
+      inputPorts,
+      outputPorts,
+      data,
+      id
+    );
   }
 
   // 根据节点类型获取默认处理时间
@@ -141,5 +177,18 @@ export class NodeFactory {
 
   static createOutputNode(label: string, position: { x: number; y: number }, data?: Partial<NodeData>): Node {
     return this.createNode(NodeType.OUTPUT, label, position, data);
+  }
+
+  // 创建包含所有端口类型的示例节点
+  static createDemoTypedNode(position: { x: number; y: number }, id?: string): Node {
+    return this.createTypedPortNode(
+      NodeType.CUSTOM,
+      '类型端口演示节点',
+      position,
+      [PortType.A, PortType.B, PortType.C],
+      [PortType.A, PortType.B, PortType.C],
+      { duration: 2000 },
+      id || 'typed-demo'
+    );
   }
 } 

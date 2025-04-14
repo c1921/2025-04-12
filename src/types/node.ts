@@ -5,22 +5,30 @@ import type { Component, VNode, RendererElement, RendererNode } from 'vue';
 // 节点状态类型
 export type NodeStatus = 'idle' | 'running' | 'completed';
 
+// 端口类型枚举
+export enum PortType {
+  A = 'A',
+  B = 'B',
+  C = 'C',
+  DEFAULT = 'DEFAULT'
+}
+
+// 端口接口
+export interface Port {
+  id: string;
+  label?: string;
+  position?: Position;
+  type?: PortType; // 端口类型，用于确定颜色
+}
+
 // 节点数据接口
 export interface NodeData {
   label?: string;
   duration?: number; // 改为可选，如果不存在会使用默认值
   status?: NodeStatus; // 初始可以为undefined
   ports?: {
-    inputs?: Array<{
-      id: string;
-      label?: string;
-      position?: Position;
-    }>;
-    outputs?: Array<{
-      id: string;
-      label?: string;
-      position?: Position;
-    }>;
+    inputs?: Array<Port>;
+    outputs?: Array<Port>;
   };
   [key: string]: any; // 允许扩展其他属性
 }

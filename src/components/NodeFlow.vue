@@ -35,12 +35,15 @@
         :snap-grid="[20, 20]"
         :editable="true"
         :deletable="true"
+        :is-valid-connection="isValidConnection"
         @connect="onConnect"
         @edge-update="onEdgeUpdate"
         @edge-update-start="onEdgeUpdateStart"
         @edge-update-end="onEdgeUpdateEnd"
         @drop="onDrop"
         @dragover="onDragOver"
+        @connectStart="onConnectStart"
+        @connectEnd="onConnectEnd"
       >
         <template #node-custom="nodeProps">
           <UnifiedNode v-bind="nodeProps" />
@@ -64,6 +67,13 @@
         <Background :pattern-color="'#aaa'" :gap="8" />
         <MiniMap />
         <Controls />
+        
+        <!-- 验证提示 -->
+        <Panel v-if="showValidationInfo" position="top-center" class="validation-panel">
+          <div class="validation-info" :class="{ 'valid': isValidInfo, 'invalid': !isValidInfo }">
+            {{ validationMessage }}
+          </div>
+        </Panel>
       </VueFlow>
     </div>
   </div>
@@ -90,7 +100,7 @@ import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/minimap/dist/style.css';
 import '@vue-flow/controls/dist/style.css';
-import { NodeType } from '../types/node';
+import { NodeType, PortType } from '../types/node';
 import { NodeFactory } from '../factories/NodeFactory';
 import { EdgeFactory } from '../factories/EdgeFactory';
 import { WorkflowService } from '../services/WorkflowService';
@@ -112,6 +122,7 @@ export default defineComponent({
     const transform1Id = 'transform-1';
     const output1Id = 'output-1';
     const multiPortId = 'multi-port-1';
+    const typedPortId = 'typed-port-1';
 
     const initialNodes = [
       NodeFactory.createNode(NodeType.INPUT, '输入节点 1', { x: 0, y: 0 }, undefined, input1Id),
@@ -128,6 +139,17 @@ export default defineComponent({
         2,  // 2个输出端口
         { duration: 4000 },  // 其他数据
         multiPortId
+      ),
+      
+      // 类型端口演示节点
+      NodeFactory.createTypedPortNode(
+        NodeType.CUSTOM,
+        '类型端口节点',
+        { x: 500, y: 200 },
+        [PortType.A, PortType.B, PortType.C],  // 输入端口类型
+        [PortType.A, PortType.B, PortType.C],  // 输出端口类型
+        { duration: 2500 },
+        typedPortId
       )
     ];
 
@@ -140,7 +162,11 @@ export default defineComponent({
       // 多端口节点的连接线
       EdgeFactory.createDataFlowEdge(input1Id, `${multiPortId}__input_1`, 'edge-4'),
       EdgeFactory.createDataFlowEdge(process1Id, `${multiPortId}__input_2`, 'edge-5'),
-      EdgeFactory.createDataFlowEdge(`${multiPortId}__output_1`, output1Id, 'edge-6')
+      EdgeFactory.createDataFlowEdge(`${multiPortId}__output_1`, output1Id, 'edge-6'),
+      
+      // 类型端口节点的连接线
+      EdgeFactory.createDataFlowEdge(transform1Id, `${typedPortId}__input_A_1`, 'edge-7'),
+      EdgeFactory.createDataFlowEdge(`${typedPortId}__output_B_1`, output1Id, 'edge-8')
     ];
 
     // 侧边栏可拖拽节点类型定义
@@ -151,7 +177,8 @@ export default defineComponent({
       { type: NodeType.FILTER, label: '过滤节点', class: 'filter-node', inputs: 1, outputs: 1 },
       { type: NodeType.OUTPUT, label: '输出节点', class: 'output-node', inputs: 1, outputs: 0 },
       { type: NodeType.CUSTOM, label: '自定义节点', class: 'custom-node', inputs: 1, outputs: 1 },
-      { type: 'multi-port', label: '多端口节点', class: 'process-node', inputs: 2, outputs: 2 }
+      { type: 'multi-port', label: '多端口节点', class: 'process-node', inputs: 2, outputs: 2 },
+      { type: 'typed-port', label: '类型端口节点', class: 'custom-node', typedPorts: true }
     ];
 
     // 使用vueFlow组合API
@@ -167,6 +194,18 @@ export default defineComponent({
     // 用于边更新暂存
     const edgeUpdateSuccessful = ref(true);
     const edgeUpdateElement = ref<Edge | null>(null);
+
+    // 连接验证状态
+    const showValidationInfo = ref(false);
+    const isValidInfo = ref(false);
+    const validationMessage = ref('');
+    
+    // 当前正在连接的端口信息
+    const currentConnectionInfo = ref<{
+      sourceNode?: any;
+      sourceHandle?: string;
+      sourcePort?: any;
+    }>({});
 
     // 拖拽开始事件处理
     const onDragStart = (event: DragEvent, nodeType: any) => {
@@ -216,6 +255,17 @@ export default defineComponent({
           { duration: 3000 },
           id
         );
+      } else if (data.type === 'typed-port') {
+        // 创建带有类型端口的节点
+        newNode = NodeFactory.createTypedPortNode(
+          NodeType.CUSTOM,
+          `类型端口节点 ${getNodes.value.length + 1}`,
+          position,
+          [PortType.A, PortType.B, PortType.C],
+          [PortType.A, PortType.B, PortType.C],
+          { duration: 2500 },
+          id
+        );
       } else {
         // 创建普通节点
         newNode = NodeFactory.createNode(
@@ -232,8 +282,81 @@ export default defineComponent({
       console.log('新节点已创建:', newNode);
     };
 
+    // 验证连接是否有效
+    const isValidConnection = (connection: Connection): boolean => {
+      // 没有源或目标，或者没有句柄标识符，不能验证
+      if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
+        return false;
+      }
+      
+      // 查找源节点和目标节点
+      const sourceNode = getNodes.value.find(node => node.id === connection.source);
+      const targetNode = getNodes.value.find(node => node.id === connection.target);
+      
+      if (!sourceNode || !targetNode) {
+        return false;
+      }
+      
+      // 提取端口ID
+      const sourceHandleId = connection.sourceHandle.split('__')[1];
+      const targetHandleId = connection.targetHandle.split('__')[1];
+      
+      if (!sourceHandleId || !targetHandleId) {
+        return true; // 如果不是自定义端口，允许连接
+      }
+      
+      // 查找源端口和目标端口
+      const sourceOutputs = sourceNode.data?.ports?.outputs || [];
+      const targetInputs = targetNode.data?.ports?.inputs || [];
+      
+      const sourcePort = sourceOutputs.find((port: any) => port.id === sourceHandleId);
+      const targetPort = targetInputs.find((port: any) => port.id === targetHandleId);
+      
+      // 如果端口没有类型定义，允许连接
+      if (!sourcePort?.type || !targetPort?.type) {
+        return true;
+      }
+      
+      // 检查端口类型是否匹配
+      const isTypeMatch = sourcePort.type === targetPort.type;
+      
+      // 只在类型不匹配时显示错误消息
+      if (!isTypeMatch) {
+        validationMessage.value = `❌ 连接失败：${sourcePort.type}型输出 ≠ ${targetPort.type}型输入（需类型相同）`;
+        isValidInfo.value = false;
+        showValidationInfo.value = true;
+        
+        // 3秒后隐藏错误消息
+        setTimeout(() => {
+          showValidationInfo.value = false;
+        }, 3000);
+      }
+      
+      return isTypeMatch;
+    };
+    
+    // 开始连接事件
+    const onConnectStart = () => {
+      // 清除之前的验证信息
+      showValidationInfo.value = false;
+      validationMessage.value = '';
+      isValidInfo.value = false;
+    };
+    
+    // 结束连接事件
+    const onConnectEnd = () => {
+      // 清除连接信息
+      currentConnectionInfo.value = {};
+    };
+
     // 连接节点事件处理
     const onConnect = (connection: Connection) => {
+      // 验证连接是否有效
+      if (!isValidConnection(connection)) {
+        console.log('连接被拒绝：类型不匹配');
+        return;
+      }
+      
       // 创建一个新的边
       const newEdge = EdgeFactory.createDataFlowEdge(
         connection.source, 
@@ -264,6 +387,14 @@ export default defineComponent({
     // 更新边
     const onEdgeUpdate = (updateEvent: EdgeUpdateEvent) => {
       const { edge: oldEdge, connection: newConnection } = updateEvent;
+      
+      // 验证连接是否有效
+      if (!isValidConnection(newConnection)) {
+        console.log('更新被拒绝：类型不匹配');
+        edgeUpdateSuccessful.value = false;
+        return;
+      }
+      
       console.log('更新边:', oldEdge, '->', newConnection);
       edgeUpdateSuccessful.value = true;
       
@@ -354,7 +485,13 @@ export default defineComponent({
       onEdgeUpdateEnd,
       onDragStart,
       onDragOver,
-      onDrop
+      onDrop,
+      isValidConnection,
+      onConnectStart,
+      onConnectEnd,
+      showValidationInfo,
+      isValidInfo,
+      validationMessage
     };
   }
 });
@@ -533,5 +670,56 @@ export default defineComponent({
 
 :deep(.vue-flow__node.completed) {
   box-shadow: 0 0 10px #4caf50;
+}
+
+/* 添加验证面板样式 */
+.validation-panel {
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+  z-index: 10000; /* 确保在最上层显示 */
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.validation-info {
+  padding: 10px 20px;
+  border-radius: 4px;
+  background-color: #f8f8f8;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  margin-top: 15px;
+  animation: fadeInDown 0.3s ease-out;
+  min-width: 300px;
+  text-align: center;
+}
+
+.validation-info.valid {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-left: 4px solid #4caf50;
+}
+
+.validation-info.invalid {
+  background-color: #ffebee;
+  color: #c62828;
+  border-left: 4px solid #f44336;
+}
+
+/* 添加淡入动画 */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style> 

@@ -31,15 +31,27 @@
       <div v-if="hasCustomPorts" class="port-labels">
         <!-- 输入端口标签 -->
         <div v-if="data.ports?.inputs?.length" class="input-port-labels">
-          <div v-for="input in data.ports.inputs" :key="`label-${input.id}`" class="port-label input-label">
+          <div 
+            v-for="input in data.ports.inputs" 
+            :key="`label-${input.id}`" 
+            class="port-label input-label"
+            :class="input.type ? `port-type-${input.type}` : ''"
+          >
             {{ input.label || `输入 ${input.id}` }}
+            <span v-if="input.type" class="port-type-tag">类型: {{ input.type }}</span>
           </div>
         </div>
         
         <!-- 输出端口标签 -->
         <div v-if="data.ports?.outputs?.length" class="output-port-labels">
-          <div v-for="output in data.ports.outputs" :key="`label-${output.id}`" class="port-label output-label">
+          <div 
+            v-for="output in data.ports.outputs" 
+            :key="`label-${output.id}`" 
+            class="port-label output-label"
+            :class="output.type ? `port-type-${output.type}` : ''"
+          >
             {{ output.label || `输出 ${output.id}` }}
+            <span v-if="output.type" class="port-type-tag">类型: {{ output.type }}</span>
           </div>
         </div>
       </div>
@@ -52,24 +64,28 @@
         type="target"
         :position="Position.Top"
         class="handle target-top"
+        :is-valid-connection="validateConnection"
       />
       <Handle 
         v-if="!isHorizontalLayout"
         type="source"
         :position="Position.Bottom"
         class="handle source-bottom"
+        :is-valid-connection="validateConnection"
       />
       <Handle 
         v-if="isHorizontalLayout"
         type="target"
         :position="Position.Left"
         class="handle target-left"
+        :is-valid-connection="validateConnection"
       />
       <Handle 
         v-if="isHorizontalLayout"
         type="source"
         :position="Position.Right"
         class="handle source-right"
+        :is-valid-connection="validateConnection"
       />
     </template>
     
@@ -83,6 +99,8 @@
         :position="getInputPortPosition(input, index)"
         :style="getPortStyle(input, index, data.ports.inputs.length, 'input')"
         class="handle custom-input"
+        :class="input.type ? `port-type-${input.type}` : ''"
+        :is-valid-connection="validatePortTypeConnection(input)"
       />
     </template>
     
@@ -96,6 +114,8 @@
         :position="getOutputPortPosition(output, index)"
         :style="getPortStyle(output, index, data.ports.outputs.length, 'output')"
         class="handle custom-output"
+        :class="output.type ? `port-type-${output.type}` : ''"
+        :is-valid-connection="validatePortTypeConnection(output)"
       />
     </template>
   </div>
@@ -104,7 +124,7 @@
 <script setup lang="ts">
 import { computed, h } from 'vue';
 import { type NodeProps, Position, Handle } from '@vue-flow/core';
-import { NodeType } from '../types/node';
+import { NodeType, PortType } from '../types/node';
 
 // 接收所有节点属性
 const props = defineProps<NodeProps>();
@@ -169,6 +189,27 @@ const nodeTypeHeaderClass = computed(() => {
   }
 });
 
+// 端口类型颜色映射
+const portTypeColors = {
+  [PortType.A]: '#e91e63', // 粉红色
+  [PortType.B]: '#9c27b0', // 紫色
+  [PortType.C]: '#ff9800', // 橙色
+  [PortType.DEFAULT]: undefined // 默认使用普通颜色
+};
+
+// 根据端口类型获取颜色
+const getPortColor = (port: any, type: 'input' | 'output') => {
+  // 如果定义了端口类型，使用相应的颜色
+  if (port.type && Object.values(PortType).includes(port.type)) {
+    return portTypeColors[port.type as PortType];
+  }
+  
+  // 否则使用默认的输入/输出颜色
+  return type === 'input' 
+    ? 'var(--secondary-color, #2ecc71)' 
+    : 'var(--primary-color, #3498db)';
+};
+
 // 检查是否有自定义端口
 const hasCustomPorts = computed(() => {
   return !!(props.data?.ports?.inputs?.length || props.data?.ports?.outputs?.length);
@@ -196,13 +237,50 @@ const getPortStyle = (port: any, index: number, total: number, type: 'input' | '
     : { left: `${(index + 1) * 100 / (total + 1)}%` };
     
   // 端口颜色
-  const backgroundColor = type === 'input' 
-    ? 'var(--secondary-color, #2ecc71)' 
-    : 'var(--primary-color, #3498db)';
+  const backgroundColor = getPortColor(port, type);
     
   return {
     ...position,
     backgroundColor
+  };
+};
+
+// 默认连接验证函数
+const validateConnection = () => {
+  // 默认允许连接
+  return true;
+};
+
+// 端口类型验证函数
+const validatePortTypeConnection = (port: any) => {
+  // 返回一个函数，该函数将用于验证连接
+  return (connection: any) => {
+    // 如果端口没有类型，允许连接
+    if (!port.type) {
+      return true;
+    }
+    
+    // 检查连接的另一端
+    const isSource = connection.source === props.id;
+    const otherHandleId = isSource ? connection.targetHandle : connection.sourceHandle;
+    
+    // 如果没有另一端的句柄ID，允许连接
+    if (!otherHandleId) {
+      return true;
+    }
+    
+    // 从句柄ID提取端口ID
+    const otherPortIdParts = otherHandleId.split('__');
+    if (otherPortIdParts.length < 2) {
+      return true;
+    }
+    
+    // 从VueFlow实例获取连接的另一端节点
+    // 注意：在Handle级别的验证中，我们无法直接获取其他节点的数据
+    // 这个粒度的验证将在NodeFlow组件的isValidConnection中处理
+    
+    // 在Handle级别，我们只能进行基本验证
+    return true;
   };
 };
 
@@ -437,6 +515,9 @@ const nodeIcon = computed(() => {
   font-size: 10px;
   padding: 2px 5px;
   border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .input-label {
@@ -447,6 +528,15 @@ const nodeIcon = computed(() => {
 .output-label {
   background-color: rgba(52, 152, 219, 0.2);
   color: #2c3e50;
+}
+
+.port-type-tag {
+  font-size: 9px;
+  padding: 1px 3px;
+  border-radius: 2px;
+  margin-top: 2px;
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #333;
 }
 
 .spinner {
@@ -484,5 +574,45 @@ const nodeIcon = computed(() => {
 
 .handle.source-right {
   background-color: var(--primary-color, #3498db) !important;
+}
+
+/* 添加端口类型颜色样式 */
+.handle.port-type-A {
+  background-color: #e91e63 !important; /* 粉红色 */
+}
+
+.handle.port-type-B {
+  background-color: #9c27b0 !important; /* 紫色 */
+}
+
+.handle.port-type-C {
+  background-color: #ff9800 !important; /* 橙色 */
+}
+
+.port-label.port-type-A {
+  background-color: rgba(233, 30, 99, 0.2);
+  color: #2c3e50;
+}
+
+.port-label.port-type-A .port-type-tag {
+  background-color: rgba(233, 30, 99, 0.3);
+}
+
+.port-label.port-type-B {
+  background-color: rgba(156, 39, 176, 0.2);
+  color: #2c3e50;
+}
+
+.port-label.port-type-B .port-type-tag {
+  background-color: rgba(156, 39, 176, 0.3);
+}
+
+.port-label.port-type-C {
+  background-color: rgba(255, 152, 0, 0.2);
+  color: #2c3e50;
+}
+
+.port-label.port-type-C .port-type-tag {
+  background-color: rgba(255, 152, 0, 0.3);
 }
 </style> 
