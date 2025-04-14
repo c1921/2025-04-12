@@ -1,52 +1,71 @@
 <template>
   <div class="node-flow">
-    <div class="toolbar">
-      <button @click="runWorkflow" :disabled="isRunning">{{ isRunning ? '正在运行...' : '运行工作流' }}</button>
-      <div class="layout-buttons">
-        <button @click="handleLayoutClick(LayoutDirection.VERTICAL)" class="layout-btn">纵向布局</button>
-        <button @click="handleLayoutClick(LayoutDirection.HORIZONTAL)" class="layout-btn horizontal">横向布局</button>
+    <div class="sidebar">
+      <div class="sidebar-title">节点类型</div>
+      <div class="dndnode-list">
+        <div 
+          v-for="nodeType in nodeTypes" 
+          :key="nodeType.type"
+          class="dndnode" 
+          :class="nodeType.class"
+          draggable="true"
+          @dragstart="onDragStart($event, nodeType)"
+        >
+          {{ nodeType.label }}
+        </div>
       </div>
     </div>
-    <VueFlow 
-      :nodes="initialNodes" 
-      :edges="initialEdges" 
-      :default-zoom="1.5" 
-      :min-zoom="0.2" 
-      :max-zoom="4"
-      class="vue-flow-wrapper"
-      :connect-on-click="true"
-      :snap-to-grid="true"
-      :snap-grid="[20, 20]"
-      :editable="true"
-      :deletable="true"
-      @connect="onConnect"
-      @edge-update="onEdgeUpdate"
-      @edge-update-start="onEdgeUpdateStart"
-      @edge-update-end="onEdgeUpdateEnd"
-    >
-      <template #node-custom="nodeProps">
-        <UnifiedNode v-bind="nodeProps" />
-      </template>
-      <template #node-process="nodeProps">
-        <UnifiedNode v-bind="nodeProps" />
-      </template>
-      <template #node-transform="nodeProps">
-        <UnifiedNode v-bind="nodeProps" />
-      </template>
-      <template #node-filter="nodeProps">
-        <UnifiedNode v-bind="nodeProps" />
-      </template>
-      <template #node-input="nodeProps">
-        <UnifiedNode v-bind="nodeProps" />
-      </template>
-      <template #node-output="nodeProps">
-        <UnifiedNode v-bind="nodeProps" />
-      </template>
-      
-      <Background :pattern-color="'#aaa'" :gap="8" />
-      <MiniMap />
-      <Controls />
-    </VueFlow>
+    <div class="workflow-area">
+      <div class="toolbar">
+        <button @click="runWorkflow" :disabled="isRunning">{{ isRunning ? '正在运行...' : '运行工作流' }}</button>
+        <div class="layout-buttons">
+          <button @click="handleLayoutClick(LayoutDirection.VERTICAL)" class="layout-btn">纵向布局</button>
+          <button @click="handleLayoutClick(LayoutDirection.HORIZONTAL)" class="layout-btn horizontal">横向布局</button>
+        </div>
+      </div>
+      <VueFlow 
+        :nodes="initialNodes" 
+        :edges="initialEdges" 
+        :default-zoom="1.5" 
+        :min-zoom="0.2" 
+        :max-zoom="4"
+        class="vue-flow-wrapper"
+        :connect-on-click="true"
+        :snap-to-grid="true"
+        :snap-grid="[20, 20]"
+        :editable="true"
+        :deletable="true"
+        @connect="onConnect"
+        @edge-update="onEdgeUpdate"
+        @edge-update-start="onEdgeUpdateStart"
+        @edge-update-end="onEdgeUpdateEnd"
+        @drop="onDrop"
+        @dragover="onDragOver"
+      >
+        <template #node-custom="nodeProps">
+          <UnifiedNode v-bind="nodeProps" />
+        </template>
+        <template #node-process="nodeProps">
+          <UnifiedNode v-bind="nodeProps" />
+        </template>
+        <template #node-transform="nodeProps">
+          <UnifiedNode v-bind="nodeProps" />
+        </template>
+        <template #node-filter="nodeProps">
+          <UnifiedNode v-bind="nodeProps" />
+        </template>
+        <template #node-input="nodeProps">
+          <UnifiedNode v-bind="nodeProps" />
+        </template>
+        <template #node-output="nodeProps">
+          <UnifiedNode v-bind="nodeProps" />
+        </template>
+        
+        <Background :pattern-color="'#aaa'" :gap="8" />
+        <MiniMap />
+        <Controls />
+      </VueFlow>
+    </div>
   </div>
 </template>
 
@@ -61,7 +80,8 @@ import type {
   Connection, 
   Edge, 
   EdgeMouseEvent, 
-  EdgeUpdateEvent
+  EdgeUpdateEvent,
+  XYPosition
 } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { MiniMap } from '@vue-flow/minimap';
@@ -123,9 +143,20 @@ export default defineComponent({
       EdgeFactory.createDataFlowEdge(`${multiPortId}__output_1`, output1Id, 'edge-6')
     ];
 
+    // 侧边栏可拖拽节点类型定义
+    const nodeTypes = [
+      { type: NodeType.INPUT, label: '输入节点', class: 'input-node', inputs: 0, outputs: 1 },
+      { type: NodeType.PROCESS, label: '处理节点', class: 'process-node', inputs: 1, outputs: 1 },
+      { type: NodeType.TRANSFORM, label: '转换节点', class: 'transform-node', inputs: 1, outputs: 1 },
+      { type: NodeType.FILTER, label: '过滤节点', class: 'filter-node', inputs: 1, outputs: 1 },
+      { type: NodeType.OUTPUT, label: '输出节点', class: 'output-node', inputs: 1, outputs: 0 },
+      { type: NodeType.CUSTOM, label: '自定义节点', class: 'custom-node', inputs: 1, outputs: 1 },
+      { type: 'multi-port', label: '多端口节点', class: 'process-node', inputs: 2, outputs: 2 }
+    ];
+
     // 使用vueFlow组合API
     const vueFlowInstance = useVueFlow();
-    const { getEdges, getNodes, setEdges, addEdges } = vueFlowInstance;
+    const { getEdges, getNodes, setEdges, addEdges, addNodes, project } = vueFlowInstance;
     
     // 使用改进的布局API
     const { layout } = useLayout();
@@ -136,6 +167,70 @@ export default defineComponent({
     // 用于边更新暂存
     const edgeUpdateSuccessful = ref(true);
     const edgeUpdateElement = ref<Edge | null>(null);
+
+    // 拖拽开始事件处理
+    const onDragStart = (event: DragEvent, nodeType: any) => {
+      if (event.dataTransfer) {
+        event.dataTransfer.setData('application/vueflow', JSON.stringify(nodeType));
+        event.dataTransfer.effectAllowed = 'move';
+      }
+    };
+
+    // 拖拽悬停事件处理
+    const onDragOver = (event: DragEvent) => {
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+      }
+    };
+
+    // 放置事件处理
+    const onDrop = (event: DragEvent) => {
+      if (!event.dataTransfer) return;
+
+      event.preventDefault();
+
+      // 获取拖拽的节点类型
+      const data = JSON.parse(event.dataTransfer.getData('application/vueflow'));
+      
+      // 获取放置位置相对于视口的坐标
+      const reactFlowBounds = (event.target as Element).getBoundingClientRect();
+      const position = project({
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
+      }) as XYPosition;
+
+      // 创建新节点ID
+      const id = `${data.type}-${Date.now()}`;
+      let newNode;
+
+      // 根据节点类型创建对应节点
+      if (data.type === 'multi-port') {
+        // 创建多端口节点
+        newNode = NodeFactory.createMultiPortNode(
+          NodeType.PROCESS,
+          `${data.label} ${getNodes.value.length + 1}`,
+          position,
+          data.inputs || 2,
+          data.outputs || 2,
+          { duration: 3000 },
+          id
+        );
+      } else {
+        // 创建普通节点
+        newNode = NodeFactory.createNode(
+          data.type,
+          `${data.label} ${getNodes.value.length + 1}`,
+          position,
+          { duration: 3000 },
+          id
+        );
+      }
+
+      // 添加节点到流程图
+      addNodes([newNode]);
+      console.log('新节点已创建:', newNode);
+    };
 
     // 连接节点事件处理
     const onConnect = (connection: Connection) => {
@@ -248,6 +343,7 @@ export default defineComponent({
     return {
       initialNodes,
       initialEdges,
+      nodeTypes,
       runWorkflow,
       isRunning,
       LayoutDirection,
@@ -255,7 +351,10 @@ export default defineComponent({
       onConnect,
       onEdgeUpdate,
       onEdgeUpdateStart,
-      onEdgeUpdateEnd
+      onEdgeUpdateEnd,
+      onDragStart,
+      onDragOver,
+      onDrop
     };
   }
 });
@@ -278,6 +377,90 @@ export default defineComponent({
 <style scoped>
 .node-flow {
   width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+/* 侧边栏样式 */
+.sidebar {
+  width: 180px;
+  height: 100%;
+  background-color: #f8f8f8;
+  border-right: 1px solid #ddd;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #333;
+  text-align: center;
+}
+
+.dndnode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dndnode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  border: 1px solid #1a192b;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: move;
+  transition: all 0.2s;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.dndnode:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* 节点类型样式 */
+.dndnode.input-node {
+  background-color: #e3f2fd;
+  border-color: #1976d2;
+}
+
+.dndnode.process-node {
+  background-color: #e8f5e9;
+  border-color: #388e3c;
+}
+
+.dndnode.transform-node {
+  background-color: #f3e5f5;
+  border-color: #7b1fa2;
+}
+
+.dndnode.filter-node {
+  background-color: #fff3e0;
+  border-color: #e65100;
+}
+
+.dndnode.output-node {
+  background-color: #ffebee;
+  border-color: #d32f2f;
+}
+
+.dndnode.custom-node {
+  background-color: #f5f5f5;
+  border-color: #546e7a;
+}
+
+/* 工作流区域 */
+.workflow-area {
+  flex: 1;
   height: 100%;
   display: flex;
   flex-direction: column;
