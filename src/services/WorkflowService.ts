@@ -6,6 +6,7 @@ import type { GraphNode } from '@vue-flow/core';
 export class WorkflowService {
   private vueFlow: ReturnType<typeof useVueFlow>;
   private isRunning: boolean = false;
+  private completedNodes: Set<string> = new Set(); // 新增：已完成节点集合
 
   constructor(vueFlowInstance: ReturnType<typeof useVueFlow>) {
     this.vueFlow = vueFlowInstance;
@@ -18,6 +19,7 @@ export class WorkflowService {
       node.class = 'light';
     });
     this.vueFlow.setNodes([...this.vueFlow.getNodes.value]);
+    this.completedNodes.clear(); // 清空已完成节点集合
   }
 
   // 更新节点状态
@@ -32,6 +34,11 @@ export class WorkflowService {
       
       // 更新节点
       this.vueFlow.setNodes([...this.vueFlow.getNodes.value]); 
+
+      // 如果节点已完成，将其添加到已完成节点集合中
+      if (status === 'completed') {
+        this.completedNodes.add(nodeId);
+      }
     }
   }
 
@@ -66,15 +73,44 @@ export class WorkflowService {
       .map(edge => edge.target);
   }
 
+  // 查找上游节点
+  findUpstreamNodes(nodeId: string): string[] {
+    return this.vueFlow.getEdges.value
+      .filter(edge => edge.target === nodeId)
+      .map(edge => edge.source);
+  }
+
+  // 检查节点的所有上游节点是否已完成
+  areAllUpstreamNodesCompleted(nodeId: string): boolean {
+    const upstreamNodes = this.findUpstreamNodes(nodeId);
+    
+    // 如果没有上游节点，则认为条件满足
+    if (upstreamNodes.length === 0) {
+      return true;
+    }
+    
+    // 检查所有上游节点是否都已完成
+    return upstreamNodes.every(upstreamId => this.completedNodes.has(upstreamId));
+  }
+
   // 递归处理节点
   async processNode(nodeId: string): Promise<void> {
+    // 检查节点是否已经完成或正在运行
+    const node = this.vueFlow.findNode(nodeId);
+    if (!node || node.data.status === 'completed') {
+      return;
+    }
+
+    // 检查所有上游节点是否已完成
+    if (!this.areAllUpstreamNodesCompleted(nodeId)) {
+      return; // 如果上游节点未完成，则不执行此节点
+    }
+    
     // 执行当前节点
     await this.executeNode(nodeId);
     
-    // 查找下一个节点
+    // 查找下一个节点并处理
     const nextNodeIds = this.findNextNodes(nodeId);
-    
-    // 顺序执行下一个节点
     for (const nextNodeId of nextNodeIds) {
       await this.processNode(nextNodeId);
     }
@@ -95,6 +131,19 @@ export class WorkflowService {
     // 从每个起始节点开始执行
     for (const startNode of startNodes) {
       await this.processNode(startNode.id);
+    }
+
+    // 确保所有节点都被处理
+    // 可能存在由于依赖关系而未立即处理的节点
+    let allNodesProcessed = false;
+    while (!allNodesProcessed) {
+      allNodesProcessed = true;
+      for (const node of this.vueFlow.getNodes.value) {
+        if (node.data.status !== 'completed' && this.areAllUpstreamNodesCompleted(node.id)) {
+          allNodesProcessed = false;
+          await this.processNode(node.id);
+        }
+      }
     }
     
     this.isRunning = false;
