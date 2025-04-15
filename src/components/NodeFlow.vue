@@ -116,6 +116,18 @@ export default defineComponent({
     UnifiedNode
   },
   setup() {
+    // 侧边栏可拖拽节点类型定义
+    const nodeTypes = [
+      { type: NodeType.INPUT, label: '输入节点', class: 'input-node', inputs: 0, outputs: 1 },
+      { type: NodeType.PROCESS, label: '处理节点', class: 'process-node', inputs: 1, outputs: 1 },
+      { type: NodeType.TRANSFORM, label: '转换节点', class: 'transform-node', inputs: 1, outputs: 1 },
+      { type: NodeType.FILTER, label: '过滤节点', class: 'filter-node', inputs: 1, outputs: 1 },
+      { type: NodeType.OUTPUT, label: '输出节点', class: 'output-node', inputs: 1, outputs: 0 },
+      { type: NodeType.CUSTOM, label: '自定义节点', class: 'custom-node', inputs: 1, outputs: 1 },
+      { type: 'multi-port', label: '多端口节点', class: 'process-node', inputs: 2, outputs: 2 },
+      { type: 'typed-port', label: '类型端口节点', class: 'custom-node', typedPorts: true }
+    ];
+
     // 创建初始节点和边
     const input1Id = 'input-1';
     const process1Id = 'process-1';
@@ -125,10 +137,35 @@ export default defineComponent({
     const typedPortId = 'typed-port-1';
 
     const initialNodes = [
-      NodeFactory.createNode(NodeType.INPUT, '输入节点 1', { x: 0, y: 0 }, undefined, input1Id),
-      NodeFactory.createNode(NodeType.PROCESS, '处理节点 1', { x: 250, y: 0 }, undefined, process1Id),
-      NodeFactory.createNode(NodeType.TRANSFORM, '转换节点 1', { x: 500, y: 0 }, undefined, transform1Id),
-      NodeFactory.createNode(NodeType.OUTPUT, '输出节点 1', { x: 750, y: 0 }, undefined, output1Id),
+      // 输入节点只有输出端口
+      NodeFactory.createNode(NodeType.INPUT, '输入节点 1', { x: 0, y: 0 }, {
+        ports: {
+          inputs: [],
+          outputs: [{ id: 'output_1', label: '输出 1' }]
+        }
+      }, input1Id),
+      
+      NodeFactory.createNode(NodeType.PROCESS, '处理节点 1', { x: 250, y: 0 }, {
+        ports: {
+          inputs: [{ id: 'input_1', label: '输入 1' }],
+          outputs: [{ id: 'output_1', label: '输出 1' }]
+        }
+      }, process1Id),
+      
+      NodeFactory.createNode(NodeType.TRANSFORM, '转换节点 1', { x: 500, y: 0 }, {
+        ports: {
+          inputs: [{ id: 'input_1', label: '输入 1' }],
+          outputs: [{ id: 'output_1', label: '输出 1' }]
+        }
+      }, transform1Id),
+      
+      // 输出节点只有输入端口
+      NodeFactory.createNode(NodeType.OUTPUT, '输出节点 1', { x: 750, y: 0 }, {
+        ports: {
+          inputs: [{ id: 'input_1', label: '输入 1' }],
+          outputs: []
+        }
+      }, output1Id),
       
       // 多端口节点示例
       NodeFactory.createMultiPortNode(
@@ -167,18 +204,6 @@ export default defineComponent({
       // 类型端口节点的连接线
       EdgeFactory.createDataFlowEdge(transform1Id, `${typedPortId}__input_A_1`, 'edge-7'),
       EdgeFactory.createDataFlowEdge(`${typedPortId}__output_B_1`, output1Id, 'edge-8')
-    ];
-
-    // 侧边栏可拖拽节点类型定义
-    const nodeTypes = [
-      { type: NodeType.INPUT, label: '输入节点', class: 'input-node', inputs: 0, outputs: 1 },
-      { type: NodeType.PROCESS, label: '处理节点', class: 'process-node', inputs: 1, outputs: 1 },
-      { type: NodeType.TRANSFORM, label: '转换节点', class: 'transform-node', inputs: 1, outputs: 1 },
-      { type: NodeType.FILTER, label: '过滤节点', class: 'filter-node', inputs: 1, outputs: 1 },
-      { type: NodeType.OUTPUT, label: '输出节点', class: 'output-node', inputs: 1, outputs: 0 },
-      { type: NodeType.CUSTOM, label: '自定义节点', class: 'custom-node', inputs: 1, outputs: 1 },
-      { type: 'multi-port', label: '多端口节点', class: 'process-node', inputs: 2, outputs: 2 },
-      { type: 'typed-port', label: '类型端口节点', class: 'custom-node', typedPorts: true }
     ];
 
     // 使用vueFlow组合API
