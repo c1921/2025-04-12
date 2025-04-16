@@ -89,6 +89,7 @@ import { EdgeFactory } from '../factories/EdgeFactory';
 import { WorkflowService } from '../services/WorkflowService';
 import { useLayout, LayoutDirection } from '../services/LayoutService';
 import { FlowInitializer } from '../services/FlowInitializer';
+import { ConnectionValidator } from '../services/ConnectionValidator';
 import UnifiedNode from './UnifiedNode.vue';
 import NodeSidebar from './NodeSidebar.vue';
 import FlowToolbar from './FlowToolbar.vue';
@@ -115,6 +116,9 @@ export default defineComponent({
     
     // 使用改进的布局API
     const { layout } = useLayout();
+    
+    // 创建连接验证器实例
+    const connectionValidator = new ConnectionValidator();
 
     // 工作流执行状态
     const isRunning = ref(false);
@@ -134,6 +138,18 @@ export default defineComponent({
       sourceHandle?: string;
       sourcePort?: any;
     }>({});
+    
+    // 显示验证消息回调
+    const showValidationMessage = (message: string, isValid: boolean) => {
+      validationMessage.value = message;
+      isValidInfo.value = isValid;
+      showValidationInfo.value = true;
+    };
+    
+    // 隐藏验证消息回调
+    const hideValidationMessage = () => {
+      showValidationInfo.value = false;
+    };
 
     // 拖拽开始事件处理 - 从子组件接收事件
     const onDragStart = ({ nodeType }: { nodeType: any }) => {
@@ -173,87 +189,24 @@ export default defineComponent({
       console.log('新节点已创建:', newNode);
     };
 
-    // 验证连接是否有效
+    // 验证连接是否有效 - 使用ConnectionValidator
     const isValidConnection = (connection: Connection): boolean => {
-      // 没有源或目标，或者没有句柄标识符，不能验证
-      if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) {
-        return false;
-      }
+      const validationResult = connectionValidator.validateConnection(
+        connection, 
+        getNodes.value,
+        {
+          showValidationMessage,
+          hideValidationMessage
+        }
+      );
       
-      // 查找源节点和目标节点
-      const sourceNode = getNodes.value.find(node => node.id === connection.source);
-      const targetNode = getNodes.value.find(node => node.id === connection.target);
-      
-      if (!sourceNode || !targetNode) {
-        return false;
-      }
-      
-      // 检查连接方向是否正确（只能从输出连接到输入）
-      const isSourceOutput = connection.sourceHandle.includes('__') 
-        ? connection.sourceHandle.startsWith(`${connection.source}__output_`)
-        : true; // 默认端口默认为输出
-      
-      const isTargetInput = connection.targetHandle.includes('__')
-        ? connection.targetHandle.startsWith(`${connection.target}__input_`)
-        : true; // 默认端口默认为输入
-      
-      if (!isSourceOutput || !isTargetInput) {
-        validationMessage.value = '❌ 连接失败：只能从输出端口连接到输入端口';
-        isValidInfo.value = false;
-        showValidationInfo.value = true;
-        
-        // 3秒后隐藏错误消息
-        setTimeout(() => {
-          showValidationInfo.value = false;
-        }, 3000);
-        
-        return false;
-      }
-      
-      // 提取端口ID
-      const sourceHandleId = connection.sourceHandle.split('__')[1];
-      const targetHandleId = connection.targetHandle.split('__')[1];
-      
-      if (!sourceHandleId || !targetHandleId) {
-        return true; // 如果不是自定义端口，允许连接
-      }
-      
-      // 查找源端口和目标端口
-      const sourceOutputs = sourceNode.data?.ports?.outputs || [];
-      const targetInputs = targetNode.data?.ports?.inputs || [];
-      
-      const sourcePort = sourceOutputs.find((port: any) => port.id === sourceHandleId);
-      const targetPort = targetInputs.find((port: any) => port.id === targetHandleId);
-      
-      // 如果端口没有类型定义，允许连接
-      if (!sourcePort?.type || !targetPort?.type) {
-        return true;
-      }
-      
-      // 检查端口类型是否匹配
-      const isTypeMatch = sourcePort.type === targetPort.type;
-      
-      // 只在类型不匹配时显示错误消息
-      if (!isTypeMatch) {
-        validationMessage.value = `❌ 连接失败：${sourcePort.type}型输出 ≠ ${targetPort.type}型输入（需类型相同）`;
-        isValidInfo.value = false;
-        showValidationInfo.value = true;
-        
-        // 3秒后隐藏错误消息
-        setTimeout(() => {
-          showValidationInfo.value = false;
-        }, 3000);
-      }
-      
-      return isTypeMatch;
+      return validationResult.isValid;
     };
     
     // 开始连接事件
     const onConnectStart = () => {
       // 清除之前的验证信息
-      showValidationInfo.value = false;
-      validationMessage.value = '';
-      isValidInfo.value = false;
+      connectionValidator.clearValidation({ hideValidationMessage });
     };
     
     // 结束连接事件
@@ -266,7 +219,7 @@ export default defineComponent({
     const onConnect = (connection: Connection) => {
       // 验证连接是否有效
       if (!isValidConnection(connection)) {
-        console.log('连接被拒绝：类型不匹配');
+        console.log('连接被拒绝：验证未通过');
         return;
       }
       
@@ -308,7 +261,7 @@ export default defineComponent({
       
       // 验证连接是否有效
       if (!isValidConnection(newConnection)) {
-        console.log('更新被拒绝：类型不匹配');
+        console.log('更新被拒绝：验证未通过');
         edgeUpdateSuccessful.value = false;
         return;
       }
