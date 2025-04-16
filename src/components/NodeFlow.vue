@@ -565,7 +565,45 @@ export default defineComponent({
 </script>
 
 <style>
-/* 全局样式 - 解决节点尺寸问题 */
+/* 全局节点样式 */
+:root {
+  --primary-color: #3498db;
+  --primary-light: #e3f2fd;
+  --primary-dark: #2980b9;
+  
+  --secondary-color: #2ecc71;
+  --secondary-light: #e8f5e9;
+  --secondary-dark: #27ae60;
+  
+  --purple-color: #9b59b6;
+  --purple-light: #f3e5f5;
+  --purple-dark: #8e44ad;
+  
+  --orange-color: #e65100;
+  --orange-light: #fff3e0;
+  
+  --red-color: #d32f2f;
+  --red-light: #ffebee;
+  
+  --gray-color: #546e7a;
+  --gray-light: #f5f5f5;
+  --gray-dark: #1a192b;
+  
+  --border-color: #ddd;
+  --bg-light: #f8f8f8;
+  --text-dark: #333;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.2);
+  --shadow-hover: 0 3px 5px rgba(0, 0, 0, 0.2);
+  
+  --success-color: #4caf50;
+  --success-dark: #2e7d32;
+  --warning-color: #ff9800;
+  --error-color: #f44336;
+  --error-dark: #c62828;
+}
+
 .vue-flow__node {
   display: flex !important;
   justify-content: center !important;
@@ -579,18 +617,35 @@ export default defineComponent({
 </style>
 
 <style scoped>
+/* ------------------------------------
+ * 1. 基础布局
+ * ------------------------------------ */
 .node-flow {
   width: 100%;
   height: 100%;
   display: flex;
 }
 
-/* 侧边栏样式 */
+.workflow-area {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.vue-flow-wrapper {
+  flex: 1;
+  width: 100%;
+}
+
+/* ------------------------------------
+ * 2. 侧边栏
+ * ------------------------------------ */
 .sidebar {
   width: 180px;
   height: 100%;
-  background-color: #f8f8f8;
-  border-right: 1px solid #ddd;
+  background-color: var(--bg-light);
+  border-right: 1px solid var(--border-color);
   padding: 10px;
   display: flex;
   flex-direction: column;
@@ -601,7 +656,7 @@ export default defineComponent({
   font-size: 16px;
   font-weight: bold;
   margin-bottom: 15px;
-  color: #333;
+  color: var(--text-dark);
   text-align: center;
 }
 
@@ -616,64 +671,59 @@ export default defineComponent({
   align-items: center;
   justify-content: center;
   height: 40px;
-  border: 1px solid #1a192b;
+  border: 1px solid var(--gray-dark);
   border-radius: 5px;
   padding: 5px 10px;
   cursor: move;
   transition: all 0.2s;
   font-size: 12px;
   font-weight: 500;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-sm);
 }
 
 .dndnode:hover {
   transform: translateY(-2px);
-  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-hover);
 }
 
 /* 节点类型样式 */
 .dndnode.input-node {
-  background-color: #e3f2fd;
-  border-color: #1976d2;
+  background-color: var(--primary-light);
+  border-color: var(--primary-color);
 }
 
 .dndnode.process-node {
-  background-color: #e8f5e9;
-  border-color: #388e3c;
+  background-color: var(--secondary-light);
+  border-color: var(--secondary-color);
 }
 
 .dndnode.transform-node {
-  background-color: #f3e5f5;
-  border-color: #7b1fa2;
+  background-color: var(--purple-light);
+  border-color: var(--purple-color);
 }
 
 .dndnode.filter-node {
-  background-color: #fff3e0;
-  border-color: #e65100;
+  background-color: var(--orange-light);
+  border-color: var(--orange-color);
 }
 
 .dndnode.output-node {
-  background-color: #ffebee;
-  border-color: #d32f2f;
+  background-color: var(--red-light);
+  border-color: var(--red-color);
 }
 
 .dndnode.custom-node {
-  background-color: #f5f5f5;
-  border-color: #546e7a;
+  background-color: var(--gray-light);
+  border-color: var(--gray-color);
 }
 
-/* 工作流区域 */
-.workflow-area {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
+/* ------------------------------------
+ * 3. 工具栏
+ * ------------------------------------ */
 .toolbar {
   padding: 10px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #ddd;
+  background-color: var(--gray-light);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: center;
   gap: 10px;
@@ -686,32 +736,33 @@ export default defineComponent({
 
 .toolbar button {
   padding: 8px 16px;
-  background-color: var(--primary-color, #3498db);
+  background-color: var(--primary-color);
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
+  transition: background-color 0.2s;
 }
 
 .toolbar button.layout-btn {
-  background-color: var(--secondary-color, #2ecc71);
+  background-color: var(--secondary-color);
 }
 
 .toolbar button.layout-btn.horizontal {
-  background-color: #9b59b6;
+  background-color: var(--purple-color);
 }
 
 .toolbar button.layout-btn:hover {
-  background-color: #27ae60;
+  background-color: var(--secondary-dark);
 }
 
 .toolbar button.layout-btn.horizontal:hover {
-  background-color: #8e44ad;
+  background-color: var(--purple-dark);
 }
 
 .toolbar button:hover {
-  background-color: #2980b9;
+  background-color: var(--primary-dark);
 }
 
 .toolbar button:disabled {
@@ -719,11 +770,9 @@ export default defineComponent({
   cursor: not-allowed;
 }
 
-.vue-flow-wrapper {
-  flex: 1;
-  width: 100%;
-}
-
+/* ------------------------------------
+ * 4. 节点样式
+ * ------------------------------------ */
 :deep(.vue-flow__node) {
   width: auto;
   display: flex;
@@ -732,14 +781,16 @@ export default defineComponent({
 }
 
 :deep(.vue-flow__node.running) {
-  box-shadow: 0 0 10px #ff9800;
+  box-shadow: 0 0 10px var(--warning-color);
 }
 
 :deep(.vue-flow__node.completed) {
-  box-shadow: 0 0 10px #4caf50;
+  box-shadow: 0 0 10px var(--success-color);
 }
 
-/* 添加验证面板样式 */
+/* ------------------------------------
+ * 5. 验证提示
+ * ------------------------------------ */
 .validation-panel {
   padding: 10px;
   display: flex;
@@ -755,10 +806,10 @@ export default defineComponent({
 .validation-info {
   padding: 10px 20px;
   border-radius: 4px;
-  background-color: #f8f8f8;
+  background-color: var(--bg-light);
   font-size: 14px;
   font-weight: 500;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
   margin-top: 15px;
   animation: fadeInDown 0.3s ease-out;
@@ -767,18 +818,20 @@ export default defineComponent({
 }
 
 .validation-info.valid {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-  border-left: 4px solid #4caf50;
+  background-color: var(--secondary-light);
+  color: var(--success-dark);
+  border-left: 4px solid var(--success-color);
 }
 
 .validation-info.invalid {
-  background-color: #ffebee;
-  color: #c62828;
-  border-left: 4px solid #f44336;
+  background-color: var(--red-light);
+  color: var(--error-dark);
+  border-left: 4px solid var(--error-color);
 }
 
-/* 添加淡入动画 */
+/* ------------------------------------
+ * 6. 动画
+ * ------------------------------------ */
 @keyframes fadeInDown {
   from {
     opacity: 0;

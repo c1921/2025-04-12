@@ -337,11 +337,14 @@ const nodeIcon = computed(() => {
 </style>
 
 <style scoped>
+/* ------------------------------------
+ * 1. 基础节点样式
+ * ------------------------------------ */
 .unified-node {
-  border: 1px solid #1a192b;
+  border: 1px solid var(--gray-dark);
   border-radius: 3px;
   background: white;
-  color: #222;
+  color: var(--text-dark);
   font-size: 12px;
   text-align: center;
   width: 180px;
@@ -352,33 +355,35 @@ const nodeIcon = computed(() => {
 
 /* 节点类型样式 */
 .unified-node.input-node {
-  background-color: #e3f2fd;
+  background-color: var(--primary-light);
 }
 
 .unified-node.process-node {
-  background-color: #e8f5e9;
+  background-color: var(--secondary-light);
 }
 
 .unified-node.transform-node {
-  background-color: #f3e5f5;
+  background-color: var(--purple-light);
 }
 
 .unified-node.filter-node {
-  background-color: #fff3e0;
+  background-color: var(--orange-light);
 }
 
 .unified-node.output-node {
-  background-color: #ffebee;
+  background-color: var(--red-light);
 }
 
 .unified-node.custom-node {
-  background-color: #f5f5f5;
+  background-color: var(--gray-light);
 }
 
-/* 头部样式 */
+/* ------------------------------------
+ * 2. 头部样式
+ * ------------------------------------ */
 .unified-node-header {
   padding: 8px;
-  border-bottom: 1px solid #e2e2e2;
+  border-bottom: 1px solid var(--border-color);
   width: 100%;
 }
 
@@ -403,7 +408,7 @@ const nodeIcon = computed(() => {
 }
 
 .unified-node-header.custom-header {
-  background-color: #f8f8f8;
+  background-color: var(--bg-light);
 }
 
 .unified-node-header-title {
@@ -414,9 +419,11 @@ const nodeIcon = computed(() => {
   padding: 10px;
 }
 
-/* 节点状态样式 */
+/* ------------------------------------
+ * 3. 节点状态样式
+ * ------------------------------------ */
 .running-node {
-  box-shadow: 0 0 0 3px rgba(253, 203, 110, 0.8), 0 0 0 6px rgba(253, 203, 110, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.8), 0 0 0 6px rgba(255, 152, 0, 0.4);
   animation: pulse 1.5s infinite;
 }
 
@@ -426,17 +433,19 @@ const nodeIcon = computed(() => {
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 3px rgba(253, 203, 110, 0.8), 0 0 0 6px rgba(253, 203, 110, 0.4);
+    box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.8), 0 0 0 6px rgba(255, 152, 0, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(253, 203, 110, 0.8), 0 0 0 10px rgba(253, 203, 110, 0.4);
+    box-shadow: 0 0 0 5px rgba(255, 152, 0, 0.8), 0 0 0 10px rgba(255, 152, 0, 0.4);
   }
   100% {
-    box-shadow: 0 0 0 3px rgba(253, 203, 110, 0.8), 0 0 0 6px rgba(253, 203, 110, 0.4);
+    box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.8), 0 0 0 6px rgba(255, 152, 0, 0.4);
   }
 }
 
-/* 图标样式 */
+/* ------------------------------------
+ * 4. 图标和内容样式
+ * ------------------------------------ */
 .node-icon {
   display: flex;
   justify-content: center;
@@ -444,30 +453,29 @@ const nodeIcon = computed(() => {
 }
 
 .input-node .node-icon {
-  color: #1976d2;
+  color: var(--primary-color);
 }
 
 .process-node .node-icon {
-  color: #388e3c;
+  color: var(--secondary-color);
 }
 
 .transform-node .node-icon {
-  color: #7b1fa2;
+  color: var(--purple-color);
 }
 
 .filter-node .node-icon {
-  color: #e65100;
+  color: var(--orange-color);
 }
 
 .output-node .node-icon {
-  color: #d32f2f;
+  color: var(--red-color);
 }
 
 .custom-node .node-icon {
-  color: #546e7a;
+  color: var(--gray-color);
 }
 
-/* 节点内容样式 */
 .node-info {
   display: flex;
   flex-direction: column;
@@ -497,7 +505,25 @@ const nodeIcon = computed(() => {
   color: #666;
 }
 
-/* 端口标签样式 */
+/* 加载动画 */
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------
+ * 5. 端口和连接点样式
+ * ------------------------------------ */
 .port-labels {
   display: flex;
   flex-direction: column;
@@ -522,12 +548,12 @@ const nodeIcon = computed(() => {
 
 .input-label {
   background-color: rgba(46, 204, 113, 0.2);
-  color: #2c3e50;
+  color: var(--text-dark);
 }
 
 .output-label {
   background-color: rgba(52, 152, 219, 0.2);
-  color: #2c3e50;
+  color: var(--text-dark);
 }
 
 .port-type-tag {
@@ -536,22 +562,7 @@ const nodeIcon = computed(() => {
   border-radius: 2px;
   margin-top: 2px;
   background-color: rgba(0, 0, 0, 0.1);
-  color: #333;
-}
-
-.spinner {
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-top-color: #09f;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  color: var(--text-dark);
 }
 
 /* 连接点样式 */
@@ -561,22 +572,24 @@ const nodeIcon = computed(() => {
 }
 
 .handle.target-top, .handle.custom-input {
-  background-color: var(--secondary-color, #2ecc71) !important;
+  background-color: var(--secondary-color) !important;
 }
 
 .handle.source-bottom, .handle.custom-output {
-  background-color: var(--primary-color, #3498db) !important;
+  background-color: var(--primary-color) !important;
 }
 
 .handle.target-left {
-  background-color: var(--secondary-color, #2ecc71) !important;
+  background-color: var(--secondary-color) !important;
 }
 
 .handle.source-right {
-  background-color: var(--primary-color, #3498db) !important;
+  background-color: var(--primary-color) !important;
 }
 
-/* 添加端口类型颜色样式 */
+/* ------------------------------------
+ * 6. 端口类型颜色样式
+ * ------------------------------------ */
 .handle.port-type-A {
   background-color: #e91e63 !important; /* 粉红色 */
 }
@@ -591,7 +604,7 @@ const nodeIcon = computed(() => {
 
 .port-label.port-type-A {
   background-color: rgba(233, 30, 99, 0.2);
-  color: #2c3e50;
+  color: var(--text-dark);
 }
 
 .port-label.port-type-A .port-type-tag {
@@ -600,7 +613,7 @@ const nodeIcon = computed(() => {
 
 .port-label.port-type-B {
   background-color: rgba(156, 39, 176, 0.2);
-  color: #2c3e50;
+  color: var(--text-dark);
 }
 
 .port-label.port-type-B .port-type-tag {
@@ -609,7 +622,7 @@ const nodeIcon = computed(() => {
 
 .port-label.port-type-C {
   background-color: rgba(255, 152, 0, 0.2);
-  color: #2c3e50;
+  color: var(--text-dark);
 }
 
 .port-label.port-type-C .port-type-tag {
