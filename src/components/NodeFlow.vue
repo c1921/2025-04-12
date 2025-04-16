@@ -1,20 +1,6 @@
 <template>
   <div class="node-flow">
-    <div class="sidebar">
-      <div class="sidebar-title">节点类型</div>
-      <div class="dndnode-list">
-        <div 
-          v-for="nodeType in nodeTypes" 
-          :key="nodeType.type"
-          class="dndnode" 
-          :class="nodeType.class"
-          draggable="true"
-          @dragstart="onDragStart($event, nodeType)"
-        >
-          {{ nodeType.label }}
-        </div>
-      </div>
-    </div>
+    <NodeSidebar @node-drag-start="onDragStart" />
     <div class="workflow-area">
       <div class="toolbar">
         <button @click="runWorkflow" :disabled="isRunning">{{ isRunning ? '正在运行...' : '运行工作流' }}</button>
@@ -84,7 +70,8 @@ import { defineComponent, ref, onMounted } from 'vue';
 import { 
   VueFlow, 
   useVueFlow,
-  updateEdge 
+  updateEdge,
+  Panel
 } from '@vue-flow/core';
 import type { 
   Connection, 
@@ -106,6 +93,7 @@ import { EdgeFactory } from '../factories/EdgeFactory';
 import { WorkflowService } from '../services/WorkflowService';
 import { useLayout, LayoutDirection } from '../services/LayoutService';
 import UnifiedNode from './UnifiedNode.vue';
+import NodeSidebar from './NodeSidebar.vue';
 
 export default defineComponent({
   components: {
@@ -113,21 +101,11 @@ export default defineComponent({
     Background,
     MiniMap,
     Controls,
-    UnifiedNode
+    UnifiedNode,
+    Panel,
+    NodeSidebar
   },
   setup() {
-    // 侧边栏可拖拽节点类型定义
-    const nodeTypes = [
-      { type: NodeType.INPUT, label: '输入节点', class: 'input-node', inputs: 0, outputs: 1 },
-      { type: NodeType.PROCESS, label: '处理节点', class: 'process-node', inputs: 1, outputs: 1 },
-      { type: NodeType.TRANSFORM, label: '转换节点', class: 'transform-node', inputs: 1, outputs: 1 },
-      { type: NodeType.FILTER, label: '过滤节点', class: 'filter-node', inputs: 1, outputs: 1 },
-      { type: NodeType.OUTPUT, label: '输出节点', class: 'output-node', inputs: 1, outputs: 0 },
-      { type: NodeType.CUSTOM, label: '自定义节点', class: 'custom-node', inputs: 1, outputs: 1 },
-      { type: 'multi-port', label: '多端口节点', class: 'process-node', inputs: 2, outputs: 2 },
-      { type: 'typed-port', label: '类型端口节点', class: 'custom-node', typedPorts: true }
-    ];
-
     // 创建初始节点和边
     const input1Id = 'input-1';
     const process1Id = 'process-1';
@@ -232,12 +210,10 @@ export default defineComponent({
       sourcePort?: any;
     }>({});
 
-    // 拖拽开始事件处理
-    const onDragStart = (event: DragEvent, nodeType: any) => {
-      if (event.dataTransfer) {
-        event.dataTransfer.setData('application/vueflow', JSON.stringify(nodeType));
-        event.dataTransfer.effectAllowed = 'move';
-      }
+    // 拖拽开始事件处理 - 从子组件接收事件
+    const onDragStart = ({ nodeType }: { nodeType: any }) => {
+      // 子组件已经设置了dataTransfer，这里不需要重复设置
+      console.log('从NodeSidebar接收到拖拽事件:', nodeType);
     };
 
     // 拖拽悬停事件处理
@@ -541,7 +517,6 @@ export default defineComponent({
     return {
       initialNodes,
       initialEdges,
-      nodeTypes,
       runWorkflow,
       isRunning,
       LayoutDirection,
@@ -636,85 +611,6 @@ export default defineComponent({
 .vue-flow-wrapper {
   flex: 1;
   width: 100%;
-}
-
-/* ------------------------------------
- * 2. 侧边栏
- * ------------------------------------ */
-.sidebar {
-  width: 180px;
-  height: 100%;
-  background-color: var(--bg-light);
-  border-right: 1px solid var(--border-color);
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-.sidebar-title {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 15px;
-  color: var(--text-dark);
-  text-align: center;
-}
-
-.dndnode-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.dndnode {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 40px;
-  border: 1px solid var(--gray-dark);
-  border-radius: 5px;
-  padding: 5px 10px;
-  cursor: move;
-  transition: all 0.2s;
-  font-size: 12px;
-  font-weight: 500;
-  box-shadow: var(--shadow-sm);
-}
-
-.dndnode:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-hover);
-}
-
-/* 节点类型样式 */
-.dndnode.input-node {
-  background-color: var(--primary-light);
-  border-color: var(--primary-color);
-}
-
-.dndnode.process-node {
-  background-color: var(--secondary-light);
-  border-color: var(--secondary-color);
-}
-
-.dndnode.transform-node {
-  background-color: var(--purple-light);
-  border-color: var(--purple-color);
-}
-
-.dndnode.filter-node {
-  background-color: var(--orange-light);
-  border-color: var(--orange-color);
-}
-
-.dndnode.output-node {
-  background-color: var(--red-light);
-  border-color: var(--red-color);
-}
-
-.dndnode.custom-node {
-  background-color: var(--gray-light);
-  border-color: var(--gray-color);
 }
 
 /* ------------------------------------
