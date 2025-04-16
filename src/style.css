@@ -1,11 +1,11 @@
+/* 导入变量定义 */
+@import './assets/styles/variables.css';
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
-
-/* 导入变量定义 */
-@import './assets/styles/variables.css';
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
