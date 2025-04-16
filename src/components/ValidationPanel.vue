@@ -38,11 +38,8 @@ export default defineComponent({
   display: flex;
   justify-content: center;
   pointer-events: none;
-  position: absolute;
+  width: 100%;
   z-index: 10000; /* 确保在最上层显示 */
-  top: 0;
-  left: 0;
-  right: 0;
 }
 
 .validation-info {
@@ -56,6 +53,7 @@ export default defineComponent({
   margin-top: 15px;
   animation: fadeInDown 0.3s ease-out;
   min-width: 300px;
+  max-width: 80%;
   text-align: center;
 }
 
