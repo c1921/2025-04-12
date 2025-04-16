@@ -21,32 +21,105 @@ export interface Port {
   type?: PortType; // 端口类型，用于确定颜色
 }
 
-// 节点数据接口
-export interface NodeData {
+// 基础节点数据接口
+export interface BaseNodeData {
   label?: string;
-  duration?: number; // 改为可选，如果不存在会使用默认值
-  status?: NodeStatus; // 初始可以为undefined
+  status?: NodeStatus;
+  [key: string]: any; // 允许扩展其他属性
+}
+
+// 定义包含端口的节点数据接口
+export interface PortedNodeData extends BaseNodeData {
   ports?: {
     inputs?: Array<Port>;
     outputs?: Array<Port>;
   };
-  [key: string]: any; // 允许扩展其他属性
 }
 
-// 节点类型枚举
-export enum NodeType {
-  INPUT = 'input',
-  PROCESS = 'process',
-  TRANSFORM = 'transform',
-  FILTER = 'filter',
-  CUSTOM = 'custom',
-  OUTPUT = 'output'
+// 定义各类型节点的特定数据
+export interface InputNodeData extends BaseNodeData {
+  sourceType?: string;
+  // 输入节点特有属性
+}
+
+export interface ProcessNodeData extends PortedNodeData {
+  duration?: number;
+  // 处理节点特有属性
+}
+
+export interface TransformNodeData extends PortedNodeData {
+  duration?: number;
+  transformRules?: any;
+  // 转换节点特有属性
+}
+
+export interface FilterNodeData extends PortedNodeData {
+  duration?: number;
+  filterCondition?: any;
+  // 过滤节点特有属性
+}
+
+export interface OutputNodeData extends BaseNodeData {
+  destination?: string;
+  // 输出节点特有属性
+}
+
+export interface CustomNodeData extends PortedNodeData {
+  duration?: number;
+  // 自定义节点特有属性
+}
+
+// 节点数据类型联合
+export type NodeData = 
+  | InputNodeData 
+  | ProcessNodeData 
+  | TransformNodeData 
+  | FilterNodeData 
+  | OutputNodeData 
+  | CustomNodeData;
+
+// 节点类型常量 - 使用const代替enum以提高灵活性
+export const NodeType = {
+  INPUT: 'input',
+  PROCESS: 'process',
+  TRANSFORM: 'transform',
+  FILTER: 'filter',
+  CUSTOM: 'custom',
+  OUTPUT: 'output'
+} as const;
+
+// 从常量对象中提取类型
+export type NodeTypeValue = typeof NodeType[keyof typeof NodeType];
+
+// 类型守卫函数
+export function isInputNode(node: Node): node is Node & { data: InputNodeData } {
+  return node.type === NodeType.INPUT;
+}
+
+export function isProcessNode(node: Node): node is Node & { data: ProcessNodeData } {
+  return node.type === NodeType.PROCESS;
+}
+
+export function isTransformNode(node: Node): node is Node & { data: TransformNodeData } {
+  return node.type === NodeType.TRANSFORM;
+}
+
+export function isFilterNode(node: Node): node is Node & { data: FilterNodeData } {
+  return node.type === NodeType.FILTER;
+}
+
+export function isOutputNode(node: Node): node is Node & { data: OutputNodeData } {
+  return node.type === NodeType.OUTPUT;
+}
+
+export function isCustomNode(node: Node): node is Node & { data: CustomNodeData } {
+  return node.type === NodeType.CUSTOM;
 }
 
 // 节点接口，兼容GraphNode
 export interface Node {
   id: string;
-  type: string;
+  type: NodeTypeValue;
   label: string | VNode<RendererNode, RendererElement, { [key: string]: any; }> | Component | undefined;
   position: { x: number; y: number };
   class: string;

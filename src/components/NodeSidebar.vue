@@ -18,26 +18,28 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { NodeType } from '../types/node';
+import type { NodeTypeValue } from '../types/node';
+import { NodeFactory } from '../factories/NodeFactory';
+
+// 侧边栏节点类型接口
+interface SidebarNodeType {
+  type: NodeTypeValue | string;
+  label: string;
+  class: string;
+  inputs: number;
+  outputs: number;
+  typedPorts?: boolean;
+}
 
 export default defineComponent({
   name: 'NodeSidebar',
   emits: ['node-drag-start'],
   setup(_, { emit }) {
-    // 侧边栏可拖拽节点类型定义
-    const nodeTypes = [
-      { type: NodeType.INPUT, label: '输入节点', class: 'input-node', inputs: 0, outputs: 1 },
-      { type: NodeType.PROCESS, label: '处理节点', class: 'process-node', inputs: 1, outputs: 1 },
-      { type: NodeType.TRANSFORM, label: '转换节点', class: 'transform-node', inputs: 1, outputs: 1 },
-      { type: NodeType.FILTER, label: '过滤节点', class: 'filter-node', inputs: 1, outputs: 1 },
-      { type: NodeType.OUTPUT, label: '输出节点', class: 'output-node', inputs: 1, outputs: 0 },
-      { type: NodeType.CUSTOM, label: '自定义节点', class: 'custom-node', inputs: 1, outputs: 1 },
-      { type: 'multi-port', label: '多端口节点', class: 'process-node', inputs: 2, outputs: 2 },
-      { type: 'typed-port', label: '类型端口节点', class: 'custom-node', typedPorts: true }
-    ];
+    // 从NodeFactory获取所有注册的节点类型
+    const nodeTypes = NodeFactory.getRegisteredNodeTypes();
 
     // 拖拽开始事件处理
-    const onDragStart = (event: DragEvent, nodeType: any) => {
+    const onDragStart = (event: DragEvent, nodeType: SidebarNodeType) => {
       if (event.dataTransfer) {
         event.dataTransfer.setData('application/vueflow', JSON.stringify(nodeType));
         event.dataTransfer.effectAllowed = 'move';

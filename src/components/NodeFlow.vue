@@ -31,22 +31,10 @@
         @connectStart="onConnectStart"
         @connectEnd="onConnectEnd"
       >
-        <template #node-custom="nodeProps">
-          <UnifiedNode v-bind="nodeProps" />
-        </template>
-        <template #node-process="nodeProps">
-          <UnifiedNode v-bind="nodeProps" />
-        </template>
-        <template #node-transform="nodeProps">
-          <UnifiedNode v-bind="nodeProps" />
-        </template>
-        <template #node-filter="nodeProps">
-          <UnifiedNode v-bind="nodeProps" />
-        </template>
-        <template #node-input="nodeProps">
-          <UnifiedNode v-bind="nodeProps" />
-        </template>
-        <template #node-output="nodeProps">
+        <!-- 使用动态组件注册 -->
+        <template v-for="nodeType in Object.values(registeredNodeTypes)" 
+                  :key="nodeType" 
+                  #[`node-${nodeType}`]="nodeProps">
           <UnifiedNode v-bind="nodeProps" />
         </template>
         
@@ -66,7 +54,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import { 
   VueFlow, 
   useVueFlow,
@@ -92,6 +80,7 @@ import { WorkflowService } from '../services/WorkflowService';
 import { useLayout, LayoutDirection } from '../services/LayoutService';
 import { FlowInitializer } from '../services/FlowInitializer';
 import { ConnectionValidator } from '../services/ConnectionValidator';
+import { NodeFactory } from '../factories/NodeFactory';
 import type { Workflow } from '../types/node';
 
 // 导入组件
@@ -103,6 +92,7 @@ import ValidationPanel from './ValidationPanel.vue';
 // 导入样式
 import '../assets/styles/variables.css';
 import '../assets/styles/flow-node.css';
+import '../assets/styles/custom-nodes.css';
 
 export default defineComponent({
   components: {
@@ -116,6 +106,16 @@ export default defineComponent({
     ValidationPanel
   },
   setup() {
+    // 获取所有注册的节点类型（包括标准和自定义）
+    const registeredNodeTypes = computed(() => {
+      const nodeTypes = NodeFactory.getRegisteredNodeTypes();
+      return nodeTypes.reduce((acc, type) => {
+        const typeValue = typeof type.type === 'string' ? type.type : '';
+        acc[typeValue] = typeValue;
+        return acc;
+      }, {} as Record<string, string>);
+    });
+
     // 初始化节点和边，使用 FlowInitializer 
     const initialNodes = FlowInitializer.createInitialNodes();
     const initialEdges = FlowInitializer.createInitialEdges();
@@ -463,6 +463,10 @@ export default defineComponent({
       console.log('初始节点:', initialNodes);
       console.log('初始边:', initialEdges);
       
+      // 打印所有注册的节点类型
+      console.log('已注册的节点类型:', NodeFactory.getRegisteredNodeTypes());
+      console.log('动态组件映射:', registeredNodeTypes.value);
+      
       // 自动应用布局，带有事件回调
       setTimeout(() => {
         // 设置初始布局方向
@@ -496,7 +500,8 @@ export default defineComponent({
       onConnectEnd,
       showValidationInfo,
       isValidInfo,
-      validationMessage
+      validationMessage,
+      registeredNodeTypes
     };
   }
 });

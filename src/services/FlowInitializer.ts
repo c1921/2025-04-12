@@ -151,38 +151,22 @@ export class FlowInitializer {
     // 创建新节点ID
     const id = nodeId || `${nodeType.type}-${Date.now()}`;
     
-    // 根据节点类型创建对应节点
-    if (nodeType.type === 'multi-port') {
-      // 创建多端口节点，使用传入的方向
-      return NodeFactory.createMultiPortNode(
-        NodeType.PROCESS,
-        `${nodeType.label} ${nodeCount + 1}`,
-        position,
-        nodeType.inputs || 2,
-        nodeType.outputs || 2,
-        { duration: 3000, isHorizontal }, // 使用传入的方向标志
-        id
-      );
-    } else if (nodeType.type === 'typed-port') {
-      // 创建带有类型端口的节点，使用传入的方向
-      return NodeFactory.createTypedPortNode(
-        NodeType.CUSTOM,
-        `类型端口节点 ${nodeCount + 1}`,
-        position,
-        [PortType.A, PortType.B, PortType.C],
-        [PortType.A, PortType.B, PortType.C],
-        { duration: 2500, isHorizontal }, // 使用传入的方向标志
-        id
-      );
-    } else {
-      // 创建普通节点，使用传入的方向
-      return NodeFactory.createNode(
-        nodeType.type,
-        `${nodeType.label} ${nodeCount + 1}`,
-        position,
-        { duration: 3000, isHorizontal }, // 使用传入的方向标志
-        id
-      );
-    }
+    // 创建节点标签
+    const label = `${nodeType.label} ${nodeCount + 1}`;
+    
+    // 使用统一的NodeFactory.createNodeByType方法创建节点
+    return NodeFactory.createNodeByType(
+      nodeType.type,
+      label,
+      position,
+      { 
+        isHorizontal, // 传递水平方向标志给所有节点
+        // 根据节点类型指定默认属性
+        inputs: nodeType.inputs,
+        outputs: nodeType.outputs,
+        typedPorts: nodeType.typedPorts
+      },
+      id
+    );
   }
 } 

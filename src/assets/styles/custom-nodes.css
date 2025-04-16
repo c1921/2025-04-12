@@ -1,0 +1,62 @@
+/* 自定义节点样式 */
+
+/* 数据库节点样式 */
+.vue-flow__node-database .unified-node,
+.database-node {
+  background-color: #e6f7ff;
+  border-color: #1890ff;
+  position: relative;
+}
+
+.vue-flow__node-database .node-header,
+.database-node .node-header {
+  background-color: #1890ff;
+  color: white;
+}
+
+.vue-flow__node-database .node-icon,
+.database-node .node-icon {
+  color: #1890ff;
+}
+
+/* 定时器节点样式 */
+.vue-flow__node-timer .unified-node,
+.timer-node {
+  background-color: #fff7e6;
+  border-color: #fa8c16;
+  position: relative;
+}
+
+.vue-flow__node-timer .node-header,
+.timer-node .node-header {
+  background-color: #fa8c16;
+  color: white;
+}
+
+.vue-flow__node-timer .node-icon,
+.timer-node .node-icon {
+  color: #fa8c16;
+}
+
+/* 类型端口节点样式 */
+.port-type-A {
+  background-color: var(--primary-color) !important;
+}
+
+.port-type-B {
+  background-color: var(--secondary-color) !important;
+}
+
+.port-type-C {
+  background-color: var(--warning-color) !important;
+}
+
+/* 多端口节点强调样式 */
+.vue-flow__node-multi-port .unified-node {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 类型端口节点强调样式 */
+.vue-flow__node-typed-port .unified-node {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+} 
