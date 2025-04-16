@@ -52,12 +52,12 @@
         <MiniMap />
         <Controls />
         
-        <!-- 验证提示 -->
-        <Panel v-if="showValidationInfo" position="top-center" class="validation-panel">
-          <div class="validation-info" :class="{ 'valid': isValidInfo, 'invalid': !isValidInfo }">
-            {{ validationMessage }}
-          </div>
-        </Panel>
+        <!-- 使用独立的验证面板组件 -->
+        <ValidationPanel 
+          :show="showValidationInfo" 
+          :is-valid="isValidInfo" 
+          :message="validationMessage" 
+        />
       </VueFlow>
     </div>
   </div>
@@ -68,8 +68,7 @@ import { defineComponent, ref, onMounted } from 'vue';
 import { 
   VueFlow, 
   useVueFlow,
-  updateEdge,
-  Panel
+  updateEdge
 } from '@vue-flow/core';
 import type { 
   Connection, 
@@ -90,9 +89,16 @@ import { WorkflowService } from '../services/WorkflowService';
 import { useLayout, LayoutDirection } from '../services/LayoutService';
 import { FlowInitializer } from '../services/FlowInitializer';
 import { ConnectionValidator } from '../services/ConnectionValidator';
+
+// 导入组件
 import UnifiedNode from './UnifiedNode.vue';
 import NodeSidebar from './NodeSidebar.vue';
 import FlowToolbar from './FlowToolbar.vue';
+import ValidationPanel from './ValidationPanel.vue';
+
+// 导入样式
+import '../assets/styles/variables.css';
+import '../assets/styles/flow-node.css';
 
 export default defineComponent({
   components: {
@@ -101,9 +107,9 @@ export default defineComponent({
     MiniMap,
     Controls,
     UnifiedNode,
-    Panel,
     NodeSidebar,
-    FlowToolbar
+    FlowToolbar,
+    ValidationPanel
   },
   setup() {
     // 初始化节点和边，使用 FlowInitializer 
@@ -380,151 +386,3 @@ export default defineComponent({
   }
 });
 </script>
-
-<style>
-/* 全局节点样式 */
-:root {
-  --primary-color: #3498db;
-  --primary-light: #e3f2fd;
-  --primary-dark: #2980b9;
-  
-  --secondary-color: #2ecc71;
-  --secondary-light: #e8f5e9;
-  --secondary-dark: #27ae60;
-  
-  --purple-color: #9b59b6;
-  --purple-light: #f3e5f5;
-  --purple-dark: #8e44ad;
-  
-  --orange-color: #e65100;
-  --orange-light: #fff3e0;
-  
-  --red-color: #d32f2f;
-  --red-light: #ffebee;
-  
-  --gray-color: #546e7a;
-  --gray-light: #f5f5f5;
-  --gray-dark: #1a192b;
-  
-  --border-color: #ddd;
-  --bg-light: #f8f8f8;
-  --text-dark: #333;
-  
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-  --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.2);
-  --shadow-hover: 0 3px 5px rgba(0, 0, 0, 0.2);
-  
-  --success-color: #4caf50;
-  --success-dark: #2e7d32;
-  --warning-color: #ff9800;
-  --error-color: #f44336;
-  --error-dark: #c62828;
-}
-
-.vue-flow__node {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  width: 180px !important; 
-}
-
-.vue-flow__node > div {
-  width: 100% !important;
-}
-</style>
-
-<style scoped>
-/* ------------------------------------
- * 1. 基础布局
- * ------------------------------------ */
-.node-flow {
-  width: 100%;
-  height: 100%;
-  display: flex;
-}
-
-.workflow-area {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.vue-flow-wrapper {
-  flex: 1;
-  width: 100%;
-}
-
-/* ------------------------------------
- * 4. 节点样式
- * ------------------------------------ */
-:deep(.vue-flow__node) {
-  width: auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-:deep(.vue-flow__node.running) {
-  box-shadow: 0 0 10px var(--warning-color);
-}
-
-:deep(.vue-flow__node.completed) {
-  box-shadow: 0 0 10px var(--success-color);
-}
-
-/* ------------------------------------
- * 5. 验证提示
- * ------------------------------------ */
-.validation-panel {
-  padding: 10px;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-  position: absolute;
-  z-index: 10000; /* 确保在最上层显示 */
-  top: 0;
-  left: 0;
-  right: 0;
-}
-
-.validation-info {
-  padding: 10px 20px;
-  border-radius: 4px;
-  background-color: var(--bg-light);
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: var(--shadow-md);
-  transition: all 0.3s ease;
-  margin-top: 15px;
-  animation: fadeInDown 0.3s ease-out;
-  min-width: 300px;
-  text-align: center;
-}
-
-.validation-info.valid {
-  background-color: var(--secondary-light);
-  color: var(--success-dark);
-  border-left: 4px solid var(--success-color);
-}
-
-.validation-info.invalid {
-  background-color: var(--red-light);
-  color: var(--error-dark);
-  border-left: 4px solid var(--error-color);
-}
-
-/* ------------------------------------
- * 6. 动画
- * ------------------------------------ */
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-</style> 
