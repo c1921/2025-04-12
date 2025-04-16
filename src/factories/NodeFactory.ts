@@ -23,8 +23,11 @@ export class NodeFactory {
       ...data
     };
 
-    // 根据类型确定默认布局方向
-    const { sourcePosition, targetPosition } = this.getDefaultPositions();
+    // 从数据中提取布局方向
+    const isHorizontal = data?.isHorizontal || false;
+
+    // 根据类型和布局方向确定默认连接点位置
+    const { sourcePosition, targetPosition } = this.getDefaultPositions(isHorizontal);
 
     // 创建节点
     return {

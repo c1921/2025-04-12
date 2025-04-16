@@ -2,6 +2,7 @@ import { NodeType, PortType } from '../types/node';
 import { NodeFactory } from '../factories/NodeFactory';
 import { EdgeFactory } from '../factories/EdgeFactory';
 import type { Node, Edge } from '@vue-flow/core';
+import { useLayout, LayoutDirection } from './LayoutService';
 
 export class FlowInitializer {
   // 生成初始节点
@@ -94,41 +95,92 @@ export class FlowInitializer {
     ];
   }
 
-  // 创建新节点方法
+  // 创建新节点方法 - 弃用，保留向后兼容
   static createNewNode(nodeType: any, position: any, nodeCount: number, nodeId?: string): Node {
     // 创建新节点ID
     const id = nodeId || `${nodeType.type}-${Date.now()}`;
     
+    // 获取当前的布局方向
+    const { getCurrentDirection } = useLayout();
+    const currentDirection = getCurrentDirection();
+    const isHorizontal = currentDirection === LayoutDirection.HORIZONTAL;
+    
     // 根据节点类型创建对应节点
     if (nodeType.type === 'multi-port') {
-      // 创建多端口节点
+      // 创建多端口节点，传递当前方向
       return NodeFactory.createMultiPortNode(
         NodeType.PROCESS,
         `${nodeType.label} ${nodeCount + 1}`,
         position,
         nodeType.inputs || 2,
         nodeType.outputs || 2,
-        { duration: 3000 },
+        { duration: 3000, isHorizontal }, // 传递水平方向标志
         id
       );
     } else if (nodeType.type === 'typed-port') {
-      // 创建带有类型端口的节点
+      // 创建带有类型端口的节点，传递当前方向
       return NodeFactory.createTypedPortNode(
         NodeType.CUSTOM,
         `类型端口节点 ${nodeCount + 1}`,
         position,
         [PortType.A, PortType.B, PortType.C],
         [PortType.A, PortType.B, PortType.C],
-        { duration: 2500 },
+        { duration: 2500, isHorizontal }, // 传递水平方向标志
         id
       );
     } else {
-      // 创建普通节点
+      // 创建普通节点，传递当前方向
       return NodeFactory.createNode(
         nodeType.type,
         `${nodeType.label} ${nodeCount + 1}`,
         position,
-        { duration: 3000 },
+        { duration: 3000, isHorizontal }, // 传递水平方向标志
+        id
+      );
+    }
+  }
+  
+  // 创建新节点方法 - 直接接收方向参数
+  static createNewNodeWithDirection(
+    nodeType: any, 
+    position: any, 
+    nodeCount: number, 
+    isHorizontal: boolean,
+    nodeId?: string
+  ): Node {
+    // 创建新节点ID
+    const id = nodeId || `${nodeType.type}-${Date.now()}`;
+    
+    // 根据节点类型创建对应节点
+    if (nodeType.type === 'multi-port') {
+      // 创建多端口节点，使用传入的方向
+      return NodeFactory.createMultiPortNode(
+        NodeType.PROCESS,
+        `${nodeType.label} ${nodeCount + 1}`,
+        position,
+        nodeType.inputs || 2,
+        nodeType.outputs || 2,
+        { duration: 3000, isHorizontal }, // 使用传入的方向标志
+        id
+      );
+    } else if (nodeType.type === 'typed-port') {
+      // 创建带有类型端口的节点，使用传入的方向
+      return NodeFactory.createTypedPortNode(
+        NodeType.CUSTOM,
+        `类型端口节点 ${nodeCount + 1}`,
+        position,
+        [PortType.A, PortType.B, PortType.C],
+        [PortType.A, PortType.B, PortType.C],
+        { duration: 2500, isHorizontal }, // 使用传入的方向标志
+        id
+      );
+    } else {
+      // 创建普通节点，使用传入的方向
+      return NodeFactory.createNode(
+        nodeType.type,
+        `${nodeType.label} ${nodeCount + 1}`,
+        position,
+        { duration: 3000, isHorizontal }, // 使用传入的方向标志
         id
       );
     }

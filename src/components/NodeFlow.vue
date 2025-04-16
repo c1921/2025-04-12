@@ -121,7 +121,10 @@ export default defineComponent({
     const { getEdges, getNodes, setEdges, addEdges, addNodes, project } = vueFlowInstance;
     
     // 使用改进的布局API
-    const { layout } = useLayout();
+    const { layout, getCurrentDirection } = useLayout();
+    
+    // 当前布局方向
+    const currentDirection = ref(LayoutDirection.VERTICAL);
     
     // 创建连接验证器实例
     const connectionValidator = new ConnectionValidator();
@@ -187,12 +190,21 @@ export default defineComponent({
         y: event.clientY - reactFlowBounds.top,
       }) as XYPosition;
 
-      // 使用 FlowInitializer 创建新节点
-      const newNode = FlowInitializer.createNewNode(data, position, getNodes.value.length);
+      // 获取当前布局方向并添加到数据中
+      const direction = getCurrentDirection();
+      const isHorizontal = direction === LayoutDirection.HORIZONTAL;
+      
+      // 使用 FlowInitializer 创建新节点，并传入当前布局方向
+      const newNode = FlowInitializer.createNewNodeWithDirection(
+        data, 
+        position, 
+        getNodes.value.length,
+        isHorizontal
+      );
 
       // 添加节点到流程图
       addNodes([newNode]);
-      console.log('新节点已创建:', newNode);
+      console.log('新节点已创建:', newNode, '方向:', direction);
     };
 
     // 验证连接是否有效 - 使用ConnectionValidator
@@ -341,6 +353,9 @@ export default defineComponent({
 
     // 布局处理 - 从子组件接收事件
     const handleLayoutChange = (direction: LayoutDirection) => {
+      // 更新当前布局方向
+      currentDirection.value = direction;
+      
       layout(direction, { 
         padding: 0.2,
         nodesep: 100,
@@ -355,6 +370,9 @@ export default defineComponent({
       
       // 自动应用布局，带有事件回调
       setTimeout(() => {
+        // 设置初始布局方向
+        currentDirection.value = LayoutDirection.VERTICAL;
+        
         layout(LayoutDirection.VERTICAL, {
           padding: 0.2,
           onLayoutStart: () => console.log('布局开始...'),
