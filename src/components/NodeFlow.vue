@@ -5,7 +5,9 @@
       <FlowToolbar 
         :is-running="isRunning"
         @run-workflow="runWorkflow"
-        @layout-change="handleLayoutChange" 
+        @layout-change="handleLayoutChange"
+        @export-workflow="exportWorkflow"
+        @import-workflow="importWorkflow"
       />
       <VueFlow 
         :nodes="initialNodes" 
@@ -68,7 +70,8 @@ import { defineComponent, ref, onMounted } from 'vue';
 import { 
   VueFlow, 
   useVueFlow,
-  updateEdge
+  updateEdge,
+  Position
 } from '@vue-flow/core';
 import type { 
   Connection, 
@@ -89,6 +92,7 @@ import { WorkflowService } from '../services/WorkflowService';
 import { useLayout, LayoutDirection } from '../services/LayoutService';
 import { FlowInitializer } from '../services/FlowInitializer';
 import { ConnectionValidator } from '../services/ConnectionValidator';
+import type { Workflow } from '../types/node';
 
 // 导入组件
 import UnifiedNode from './UnifiedNode.vue';
@@ -350,6 +354,97 @@ export default defineComponent({
         isRunning.value = false;
       }
     };
+    
+    // 导出工作流
+    const exportWorkflow = () => {
+      // 创建工作流服务实例
+      const workflowService = new WorkflowService(vueFlowInstance);
+      
+      // 获取工作流数据
+      const workflow = workflowService.exportWorkflow();
+      
+      // 将工作流数据转换为JSON字符串
+      const workflowJson = JSON.stringify(workflow, null, 2);
+      
+      // 创建Blob对象
+      const blob = new Blob([workflowJson], { type: 'application/json' });
+      
+      // 创建下载链接
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // 设置文件名
+      const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
+      link.download = `workflow-${timestamp}.json`;
+      
+      // 模拟点击下载
+      document.body.appendChild(link);
+      link.click();
+      
+      // 清理
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      // 显示成功信息
+      showValidationMessage('工作流导出成功！', true);
+      
+      // 3秒后隐藏信息
+      setTimeout(() => {
+        hideValidationMessage();
+      }, 3000);
+    };
+    
+    // 导入工作流
+    const importWorkflow = (workflow: Workflow) => {
+      try {
+        // 创建工作流服务实例
+        const workflowService = new WorkflowService(vueFlowInstance);
+        
+        // 导入工作流
+        workflowService.importWorkflow(workflow);
+        
+        // 应用当前的布局方向到所有节点
+        const isHorizontal = currentDirection.value === LayoutDirection.HORIZONTAL;
+        getNodes.value.forEach(node => {
+          if (isHorizontal) {
+            node.sourcePosition = Position.Right;
+            node.targetPosition = Position.Left;
+          } else {
+            node.sourcePosition = Position.Bottom;
+            node.targetPosition = Position.Top;
+          }
+        });
+        
+        // 更新节点
+        setEdges([...getEdges.value]);
+        
+        // 应用布局
+        layout(currentDirection.value, { 
+          padding: 0.2,
+          nodesep: 100,
+          ranksep: 120
+        });
+        
+        // 显示成功信息
+        showValidationMessage('工作流导入成功！', true);
+        
+        // 3秒后隐藏信息
+        setTimeout(() => {
+          hideValidationMessage();
+        }, 3000);
+      } catch (error) {
+        console.error('导入工作流失败:', error);
+        
+        // 显示错误信息
+        showValidationMessage('工作流导入失败！请检查文件格式。', false);
+        
+        // 3秒后隐藏信息
+        setTimeout(() => {
+          hideValidationMessage();
+        }, 3000);
+      }
+    };
 
     // 布局处理 - 从子组件接收事件
     const handleLayoutChange = (direction: LayoutDirection) => {
@@ -385,6 +480,8 @@ export default defineComponent({
       initialNodes,
       initialEdges,
       runWorkflow,
+      exportWorkflow,
+      importWorkflow,
       isRunning,
       handleLayoutChange,
       onConnect,
