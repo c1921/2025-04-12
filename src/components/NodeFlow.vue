@@ -2,13 +2,11 @@
   <div class="node-flow">
     <NodeSidebar @node-drag-start="onDragStart" />
     <div class="workflow-area">
-      <div class="toolbar">
-        <button @click="runWorkflow" :disabled="isRunning">{{ isRunning ? '正在运行...' : '运行工作流' }}</button>
-        <div class="layout-buttons">
-          <button @click="handleLayoutClick(LayoutDirection.VERTICAL)" class="layout-btn">纵向布局</button>
-          <button @click="handleLayoutClick(LayoutDirection.HORIZONTAL)" class="layout-btn horizontal">横向布局</button>
-        </div>
-      </div>
+      <FlowToolbar 
+        :is-running="isRunning"
+        @run-workflow="runWorkflow"
+        @layout-change="handleLayoutChange" 
+      />
       <VueFlow 
         :nodes="initialNodes" 
         :edges="initialEdges" 
@@ -94,6 +92,7 @@ import { WorkflowService } from '../services/WorkflowService';
 import { useLayout, LayoutDirection } from '../services/LayoutService';
 import UnifiedNode from './UnifiedNode.vue';
 import NodeSidebar from './NodeSidebar.vue';
+import FlowToolbar from './FlowToolbar.vue';
 
 export default defineComponent({
   components: {
@@ -103,7 +102,8 @@ export default defineComponent({
     Controls,
     UnifiedNode,
     Panel,
-    NodeSidebar
+    NodeSidebar,
+    FlowToolbar
   },
   setup() {
     // 创建初始节点和边
@@ -490,8 +490,8 @@ export default defineComponent({
       }
     };
 
-    // 布局处理
-    const handleLayoutClick = (direction: LayoutDirection) => {
+    // 布局处理 - 从子组件接收事件
+    const handleLayoutChange = (direction: LayoutDirection) => {
       layout(direction, { 
         padding: 0.2,
         nodesep: 100,
@@ -519,8 +519,7 @@ export default defineComponent({
       initialEdges,
       runWorkflow,
       isRunning,
-      LayoutDirection,
-      handleLayoutClick,
+      handleLayoutChange,
       onConnect,
       onEdgeUpdate,
       onEdgeUpdateStart,
@@ -611,59 +610,6 @@ export default defineComponent({
 .vue-flow-wrapper {
   flex: 1;
   width: 100%;
-}
-
-/* ------------------------------------
- * 3. 工具栏
- * ------------------------------------ */
-.toolbar {
-  padding: 10px;
-  background-color: var(--gray-light);
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.layout-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.toolbar button {
-  padding: 8px 16px;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.2s;
-}
-
-.toolbar button.layout-btn {
-  background-color: var(--secondary-color);
-}
-
-.toolbar button.layout-btn.horizontal {
-  background-color: var(--purple-color);
-}
-
-.toolbar button.layout-btn:hover {
-  background-color: var(--secondary-dark);
-}
-
-.toolbar button.layout-btn.horizontal:hover {
-  background-color: var(--purple-dark);
-}
-
-.toolbar button:hover {
-  background-color: var(--primary-dark);
-}
-
-.toolbar button:disabled {
-  background-color: #95a5a6;
-  cursor: not-allowed;
 }
 
 /* ------------------------------------
